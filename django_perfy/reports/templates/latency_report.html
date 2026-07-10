@@ -1,0 +1,111 @@
+{% extends "_base.html" %}
+{% block accent %}#4f46e5{% endblock %}
+{% block subtitle %}Per-endpoint P50/P95/P99, database load, user-experience (Apdex) and server-cost attribution — sampling-corrected from production telemetry.{% endblock %}
+
+{% block body %}
+{% set max_q = (rows|map(attribute='avg_db_queries')|max) or 1 %}
+{% set max_share = (rows|map(attribute='db_share')|max) or 1 %}
+
+<div class="section">
+  <div class="sec-head"><span class="sec-tick"></span><span class="sec-title">Health headline — read this first</span></div>
+  <div class="hero">
+    <div class="hero-visual">
+      <div class="ring-wrap" style="width:132px;height:132px">{{ apdex_gauge|safe }}
+        <div class="ctr"><div class="big">{{ "%.2f"|format(apdex) }}</div><div class="cap">Platform Apdex</div></div>
+      </div>
+    </div>
+    <div class="hero-copy">
+      <span class="verdict-tag" style="background:{{ apdex_color }}">
+        {% if apdex >= 0.94 %}Healthy{% elif apdex >= 0.85 %}Watch{% else %}Action needed{% endif %}</span>
+      <h2>Platform Apdex {{ "%.2f"|format(apdex) }} at T = {{ apdex_t }} ms</h2>
+      {% if top_offender %}
+      <p><code>{{ top_offender.endpoint }}</code> carries <b>{{ top_offender.db_share }}%</b> of all
+      database time on <b>{{ top_offender.traffic_share }}%</b> of traffic
+      ({{ top_offender.avg_db_queries }} queries/request, p95 {{ top_offender.p95 }} ms) — the clearest
+      optimisation target this window.</p>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <div class="sec-head"><span class="sec-tick"></span><span class="sec-title">Platform percentiles at a glance</span></div>
+  <div class="kpis">
+    <div class="kpi" style="--kc:#16a34a"><div class="kl">P50 median</div><div class="kv">{{ kpi_p50 }}<span class="u"> ms</span></div><div class="kd">Half of requests faster than this</div></div>
+    <div class="kpi" style="--kc:#d97706"><div class="kl">P95 latency</div><div class="kv">{{ kpi_p95 }}<span class="u"> ms</span></div><div class="kd">1 in 20 users wait this long</div></div>
+    <div class="kpi" style="--kc:#b91c1c"><div class="kl">P99 latency</div><div class="kv">{{ kpi_p99 }}<span class="u"> ms</span></div><div class="kd">Worst-case tail</div></div>
+    <div class="kpi" style="--kc:#16a34a"><div class="kl">Within SLA</div><div class="kv">{{ kpi_sla_pct }}<span class="u"> %</span></div><div class="kd">&lt; {{ sla_ms }} ms · avg {{ kpi_avg_rt }} ms</div></div>
+  </div>
+</div>
+
+<div class="section">
+  <div class="sec-head"><span class="sec-tick"></span><span class="sec-title">Priority watchlist — what to fix, in order</span></div>
+  <div class="sec-lead">Ranked by <b>Priority Index</b> = traffic 30% + tail-latency 35% + database-cost 35%, normalised 0–100.</div>
+  <div class="tbl-card"><table>
+    <thead><tr><th style="width:26px">#</th><th>Endpoint</th><th class="num">Priority</th><th class="num">P95</th><th class="num">P99</th><th class="num">Qry/req</th><th class="num">DB-time share</th></tr></thead>
+    <tbody>
+      {% for r in rows %}
+      <tr {% if r.db_pct >= 50 %}class="hot"{% endif %}>
+        <td class="num">{{ loop.index }}</td>
+        <td><code>{{ r.endpoint }}</code></td>
+        <td class="num"><b>{{ r.priority }}</b></td>
+        <td class="num">{{ r.p95 }}</td>
+        <td class="num">{{ r.p99 }}</td>
+        <td class="num">{{ r.avg_db_queries }}</td>
+        <td class="num"><div class="dcell"><span class="dbar"><i style="width:{{ (r.db_share / max_share * 100)|round(0) }}%;background:#fca5a5"></i></span><span class="dval">{{ r.db_share }}%</span></div></td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table></div>
+</div>
+
+<div class="section">
+  <div class="sec-head"><span class="sec-tick"></span><span class="sec-title">Where to spend effort — traffic × latency × cost</span></div>
+  <div class="sec-lead"><b>Right</b> = more traffic · <b>up</b> = slower p95 · <b>bigger</b> = more DB time. Shaded band = slow meets popular.</div>
+  <div class="chart">
+    <div class="chart-t">Endpoint prioritisation map</div>
+    <div class="chart-s">x: traffic share · y: p95 latency · bubble area: DB-time share</div>
+    {{ bubble_svg|safe }}
+  </div>
+</div>
+
+<div class="section">
+  <div class="sec-head"><span class="sec-tick"></span><span class="sec-title">Database load &amp; user experience</span></div>
+  <div class="sec-lead"><b>Queries/request</b> exposes N+1 loops; <b>DB-bound %</b> says whether latency is the database's fault. <b>Apdex</b> (T = {{ apdex_t }} ms) and <b>tail spread</b> (P99÷P50) capture experience.</div>
+  <div class="tbl-card"><table>
+    <thead><tr><th>Endpoint</th><th class="num">Qry/req</th><th class="num">Avg DB</th><th class="num">DB-bound</th><th class="num">Tail spread</th><th class="num">Apdex</th><th>Rating</th></tr></thead>
+    <tbody>
+      {% for r in rows %}
+      <tr>
+        <td><code>{{ r.endpoint }}</code></td>
+        <td class="num"><div class="dcell"><span class="dbar"><i style="width:{{ (r.avg_db_queries / max_q * 100)|round(0) }}%;background:#93c5fd"></i></span><span class="dval">{{ r.avg_db_queries }}</span></div></td>
+        <td class="num">{{ r.avg_db_ms }} ms</td>
+        <td class="num">{{ r.db_pct }}%</td>
+        <td class="num">{{ r.tail_spread }}×</td>
+        <td class="num">{{ "%.2f"|format(r.apdex) }}</td>
+        <td>
+          {% if r.apdex >= 0.94 %}<span class="badge b-pass">Excellent</span>
+          {% elif r.apdex >= 0.85 %}<span class="badge b-info">Good</span>
+          {% elif r.apdex >= 0.70 %}<span class="badge b-warn">Fair</span>
+          {% else %}<span class="badge b-fail">Poor</span>{% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table></div>
+</div>
+
+<div class="section">
+  <div class="sec-head"><span class="sec-tick"></span><span class="sec-title">Server-cost attribution (per period)</span></div>
+  <div class="sec-lead">Cost = time × volume, scaled to the report window. <b>Compute</b> = request-handling hours · <b>DB</b> = database hours · <b>Egress</b> = response bytes.</div>
+  <div class="tbl-card"><table>
+    <thead><tr><th>Endpoint</th><th class="num">Requests</th><th class="num">Compute-time</th><th class="num">DB-time</th><th class="num">Egress</th></tr></thead>
+    <tbody>
+      {% for r in rows %}
+      <tr><td><code>{{ r.endpoint }}</code></td><td class="num">{{ r.requests|format_number }}</td>
+      <td class="num">{{ r.compute_h }} h</td><td class="num">{{ r.db_h }} h</td><td class="num">{{ r.egress_mb }} MB</td></tr>
+      {% endfor %}
+    </tbody>
+  </table></div>
+</div>
+{% endblock %}

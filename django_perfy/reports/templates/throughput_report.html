@@ -1,0 +1,97 @@
+{% extends "_base.html" %}
+{% block accent %}#0d9488{% endblock %}
+{% block subtitle %}Requests/transactions per second, concurrency headroom and the endpoint most likely to hit the ceiling first — sampling-corrected.{% endblock %}
+
+{% block body %}
+{% set max_share = (rows|map(attribute='share')|max) or 1 %}
+<div class="section">
+  <div class="sec-head"><span class="sec-tick"></span><span class="sec-title">Capacity headline</span></div>
+  <div class="hero">
+    <div class="hero-visual">
+      {% if pool_pct is not none %}
+      <div class="ring-wrap" style="width:120px;height:120px">{{ pool_gauge|safe }}
+        <div class="ctr"><div class="big">{{ pool_pct }}%</div><div class="cap">Pool used at peak</div></div></div>
+      {% endif %}
+      <div class="ring-wrap" style="width:120px;height:120px">{{ success_gauge|safe }}
+        <div class="ctr"><div class="big">{{ success_rate }}%</div><div class="cap">Success rate</div></div></div>
+    </div>
+    <div class="hero-copy">
+      <span class="verdict-tag" style="background:{% if success_rate >= 99.5 %}#16a34a{% else %}#d97706{% endif %}">
+        {% if success_rate >= 99.5 %}Pass{% else %}Watch{% endif %}</span>
+      <h2>Mean {{ mean_rps }} RPS · peak {{ peak_rps }} RPS</h2>
+      <p>The service handled <b>{{ total_requests|format_number }}</b> requests this window at a
+      <b>{{ peak_rps }} RPS</b> peak. Peak concurrency reached <b>{{ peak_conc }}</b> simultaneous
+      in-flight requests{% if pool_pct is not none %} ({{ pool_pct }}% of the {{ pool_size }}-slot pool){% endif %}.</p>
+    </div>
+  </div>
+  <div class="kpis">
+    <div class="kpi" style="--kc:#0d9488"><div class="kl">Mean throughput</div><div class="kv">{{ mean_rps }}<span class="u"> RPS</span></div><div class="kd">Across the window</div></div>
+    <div class="kpi" style="--kc:#16a34a"><div class="kl">Peak throughput</div><div class="kv">{{ peak_rps }}<span class="u"> RPS</span></div><div class="kd">Busiest bucket</div></div>
+    <div class="kpi" style="--kc:#0d9488"><div class="kl">Total requests</div><div class="kv">{{ total_requests|format_number }}</div><div class="kd">Sampling-corrected</div></div>
+    <div class="kpi" style="--kc:#d97706"><div class="kl">Peak concurrency</div><div class="kv">{{ peak_conc }}</div><div class="kd">mean {{ mean_conc }} · p95 {{ p95_conc }}</div></div>
+  </div>
+</div>
+
+<div class="section">
+  <div class="sec-head"><span class="sec-tick"></span><span class="sec-title">Throughput over time</span></div>
+  <div class="sec-lead">Requests per second per bucket (sampling-corrected, inverse-probability weighted).</div>
+  <div class="chart"><div class="chart-t">Requests per second</div><div class="chart-s">per time bucket</div>{{ throughput_svg|safe }}</div>
+</div>
+
+<div class="section">
+  <div class="sec-head"><span class="sec-tick"></span><span class="sec-title">Capacity SLO compliance</span></div>
+  <div class="sec-lead">Targets below are <b>proposed bands</b> derived from the dashboard's scale-recommendation thresholds — not signed-off SLOs.</div>
+  <div class="tbl-card"><table>
+    <thead><tr><th>Objective</th><th class="num">Target</th><th class="num">Observed</th><th>Verdict</th></tr></thead>
+    <tbody>
+      {% for o in slo_table %}
+      <tr><td>{{ o.objective }}</td><td class="num">{{ o.target }}</td><td class="num">{{ o.observed }}</td>
+      <td>{% if o.pass %}<span class="badge b-pass">Pass</span>{% else %}<span class="badge b-warn">Watch</span>{% endif %}</td></tr>
+      {% endfor %}
+    </tbody>
+  </table></div>
+</div>
+
+<div class="section">
+  <div class="sec-head"><span class="sec-tick"></span><span class="sec-title">Per-endpoint throughput share</span></div>
+  <div class="sec-lead">One request maps to one transaction here, so TPS is reported as a per-endpoint subset of RPS.</div>
+  <div class="tbl-card"><table>
+    <thead><tr><th>Endpoint</th><th class="num">Total</th><th class="num">Mean TPS</th><th class="num">Peak TPS</th><th class="num">Traffic share</th><th class="num">Err %</th></tr></thead>
+    <tbody>
+      {% for r in rows %}
+      <tr><td><code>{{ r.endpoint }}</code></td><td class="num">{{ r.requests|format_number }}</td>
+      <td class="num">{{ r.mean_tps }}</td><td class="num">{{ r.peak_tps }}</td>
+      <td class="num"><div class="dcell"><span class="dbar"><i style="width:{{ (r.share / max_share * 100)|round(0) }}%;background:#5eead4"></i></span><span class="dval">{{ r.share }}%</span></div></td>
+      <td class="num">{{ r.err_pct }}</td></tr>
+      {% endfor %}
+    </tbody>
+  </table></div>
+</div>
+
+<div class="section">
+  <div class="sec-head"><span class="sec-tick"></span><span class="sec-title">Error composition</span></div>
+  <div class="cols">
+    <div class="chart">
+      <div class="chart-t">Errors by HTTP status</div><div class="chart-s">{{ error_rate }}% of all requests</div>
+      <div style="display:flex;gap:18px;align-items:center;margin-top:6px">
+        <div>{{ error_donut|safe }}</div>
+        <div class="dlist">
+          {% for e in error_rows %}
+          <div class="li"><span class="sw" style="background:{{ e.color }}"></span><span class="nm">{{ e.label }}</span><span class="vl">{{ e.count|format_number }}</span></div>
+          {% else %}
+          <div class="nm" style="color:#64748b">No errors in this window.</div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+    <div class="chart">
+      <div class="chart-t">Concurrency depth</div><div class="chart-s">simultaneous in-flight requests</div>
+      <table style="margin-top:6px"><tbody>
+        <tr><td style="font-weight:600">Mean concurrency</td><td class="num" style="font-size:16px;font-weight:800;color:#0d9488">{{ mean_conc }}</td></tr>
+        <tr><td style="font-weight:600">P95 concurrency</td><td class="num" style="font-size:16px;font-weight:800;color:#0d9488">{{ p95_conc }}</td></tr>
+        <tr><td style="font-weight:600">Peak concurrency</td><td class="num" style="font-size:16px;font-weight:800;color:#0d9488">{{ peak_conc }}</td></tr>
+      </tbody></table>
+    </div>
+  </div>
+</div>
+{% endblock %}

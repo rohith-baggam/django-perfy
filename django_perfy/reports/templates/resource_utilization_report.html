@@ -1,0 +1,74 @@
+{% extends "_base.html" %}
+{% block accent %}#0e7490{% endblock %}
+{% block subtitle %}Per-tier CPU/RAM under load and dependency saturation (Postgres, Redis, Celery) — observed from 15-minute resource snapshots.{% endblock %}
+
+{% block body %}
+<div class="section">
+  <div class="sec-head"><span class="sec-tick"></span><span class="sec-title">Saturation headline — the binding constraint</span></div>
+  <div class="hero">
+    <div class="hero-visual">
+      <div class="ring-wrap" style="width:120px;height:120px">{{ cpu_gauge|safe }}
+        <div class="ctr"><div class="big">{{ peak_cpu }}%</div><div class="cap">Web CPU peak</div></div></div>
+      <div class="ring-wrap" style="width:120px;height:120px">{{ ram_gauge|safe }}
+        <div class="ctr"><div class="big">{{ peak_ram }}%</div><div class="cap">Web RAM peak</div></div></div>
+    </div>
+    <div class="hero-copy">
+      {% if binding %}
+      <span class="verdict-tag" style="background:{% if binding.over %}#b91c1c{% elif binding.near %}#d97706{% else %}#16a34a{% endif %}">
+        {% if binding.over %}Over threshold{% elif binding.near %}Near threshold{% else %}Healthy{% endif %}</span>
+      <h2>Binding constraint: {{ binding.name }}</h2>
+      <p><b>{{ binding.name }}</b> peaked at <b>{{ binding.value }}%</b> against a {{ binding.limit }}% ceiling
+      — {% if binding.over %}already over the line{% elif binding.near %}within 5 points of it{% else %}with comfortable headroom{% endif %}.
+      This is the first resource that will bind as load grows.</p>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <div class="sec-head"><span class="sec-tick"></span><span class="sec-title">Utilization by service tier</span></div>
+  <div class="sec-lead">Mean and peak CPU/RAM per tier across the window. Thresholds: CPU warn {{ thresholds.cpu_warn }}% / crit {{ thresholds.cpu_crit }}%, RAM warn {{ thresholds.ram_warn }}% / crit {{ thresholds.ram_crit }}%.</div>
+  <div class="tbl-card"><table>
+    <thead><tr><th>Tier</th><th class="num">CPU mean</th><th class="num">CPU peak</th><th class="num">RAM mean</th><th class="num">RAM peak</th><th class="num">Samples</th></tr></thead>
+    <tbody>
+      {% for t in tiers %}
+      <tr>
+        <td><b>{{ t.label }}</b></td>
+        <td class="num">{{ t.cpu_mean }}%</td>
+        <td class="num" style="{% if t.cpu_peak >= thresholds.cpu_crit %}color:#b91c1c;font-weight:700{% elif t.cpu_peak >= thresholds.cpu_warn %}color:#b45309;font-weight:700{% endif %}">{{ t.cpu_peak }}%</td>
+        <td class="num">{{ t.ram_mean }}%</td>
+        <td class="num" style="{% if t.ram_peak >= thresholds.ram_crit %}color:#b91c1c;font-weight:700{% elif t.ram_peak >= thresholds.ram_warn %}color:#b45309;font-weight:700{% endif %}">{{ t.ram_peak }}%</td>
+        <td class="num">{{ t.samples }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table></div>
+</div>
+
+<div class="section">
+  <div class="sec-head"><span class="sec-tick"></span><span class="sec-title">Web tier — CPU &amp; memory under load</span></div>
+  <div class="cols">
+    <div class="chart"><div class="chart-t">CPU %</div><div class="chart-s">web tier over time</div>{{ cpu_svg|safe }}</div>
+    <div class="chart"><div class="chart-t">RAM %</div><div class="chart-s">web tier over time</div>{{ ram_svg|safe }}</div>
+  </div>
+</div>
+
+<div class="section">
+  <div class="sec-head"><span class="sec-tick"></span><span class="sec-title">Dependency saturation detail</span></div>
+  <div class="sec-lead">Per-tier dependency counters (mean / peak) that bind before raw CPU on a healthy web service.</div>
+  <div class="tbl-card"><table>
+    <thead><tr><th>Tier</th><th>Metric</th><th class="num">Mean</th><th class="num">Peak</th></tr></thead>
+    <tbody>
+      {% for t in tiers %}
+        {% for field, v in t.extra.items() %}
+        <tr><td><b>{{ t.label }}</b></td><td><code>{{ field }}</code></td><td class="num">{{ v.mean }}</td><td class="num">{{ v.peak }}</td></tr>
+        {% endfor %}
+      {% endfor %}
+    </tbody>
+  </table></div>
+  <div class="note"><h4>On the connection pool</h4>
+  The Postgres connection-pool <b>size</b> is not stored in telemetry, so pool-utilisation % is
+  reported only when an operator configures <code>PERFORMANCE_REPORTS["DB_POOL_SIZE"]</code>.
+  The raw active/idle connection counts above are observed directly.</div>
+</div>
+{% endblock %}

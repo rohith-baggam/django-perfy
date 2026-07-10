@@ -1,0 +1,668 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>{% block title %}PerfMonitor{% endblock %}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;600;700&family=Google+Sans+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="{{ static('performance/dashboard/dashboard.css') }}?v={{ asset_version }}"/>
+  <style id="rx-style">
+  /* Report export — inlined so it never depends on collectstatic. */
+  .export-btn{display:inline-flex;align-items:center;gap:7px;height:32px;padding:0 13px;
+    border:1px solid var(--module-accent-ring);border-radius:9px;cursor:pointer;
+    background:var(--module-accent-soft);color:var(--module-accent-hover);
+    font-family:var(--font);font-size:12.5px;font-weight:600;line-height:1;white-space:nowrap;
+    transition:background .15s,border-color .15s,transform .12s}
+  .export-btn:hover{background:var(--state-hover);border-color:var(--app-border-strong);transform:translateY(-1px)}
+  .export-btn:active{transform:translateY(0)}
+  .export-btn svg{width:15px;height:15px;flex-shrink:0}
+
+  .rx-overlay{position:fixed;inset:0;background:rgba(0,0,0,.66);z-index:240;display:flex;
+    align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(4px)}
+  .rx-overlay.hidden{display:none!important}
+  .rx-overlay:not(.hidden){animation:rxFade .18s ease}
+  .rx-overlay:not(.hidden) .rx-modal{animation:rxPop .24s cubic-bezier(.2,.8,.2,1)}
+  @keyframes rxFade{from{opacity:0}to{opacity:1}}
+  @keyframes rxPop{from{opacity:0;transform:translateY(14px) scale(.985)}to{opacity:1;transform:none}}
+
+  .rx-modal{background:var(--app-panel);border:1px solid var(--app-border-strong);
+    border-radius:var(--radius-lg);width:100%;max-width:1040px;max-height:92vh;display:flex;
+    flex-direction:column;box-shadow:0 28px 90px rgba(0,0,0,.6);overflow:hidden}
+  .rx-hd{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;
+    border-bottom:1px solid var(--app-border)}
+  .rx-title{font-size:15px;font-weight:600;color:var(--text-primary)}
+  .rx-sub{font-size:12px;color:var(--text-muted);margin-top:2px}
+  .rx-close{border:0;background:transparent;color:var(--text-muted);font-size:17px;cursor:pointer;
+    width:32px;height:32px;border-radius:8px;transition:background .14s,color .14s}
+  .rx-close:hover{background:var(--state-hover);color:var(--text-primary)}
+
+  .rx-body{padding:18px 20px;overflow:auto}
+  .rx-field{margin-bottom:16px}
+  .rx-label{font-size:11px;font-weight:600;color:var(--text-muted);letter-spacing:.06em;
+    text-transform:uppercase;margin-bottom:8px}
+
+  .rx-seg{display:inline-flex;background:var(--app-bg);border:1px solid var(--app-border);
+    border-radius:9px;padding:3px;gap:2px}
+  .rx-seg button{border:0;background:transparent;color:var(--text-muted);padding:6px 14px;
+    border-radius:7px;cursor:pointer;font-size:12.5px;font-weight:500;font-family:var(--font);
+    transition:background .14s,color .14s}
+  .rx-seg button:hover{color:var(--text-primary)}
+  .rx-seg button.active{background:var(--module-accent-soft);color:var(--module-accent-hover);
+    box-shadow:inset 0 0 0 1px var(--module-accent-ring)}
+
+  .rx-cards{display:flex;flex-wrap:wrap;gap:10px}
+  .rx-card{flex:1 1 200px;border:1px solid var(--app-border);background:var(--app-bg);
+    border-radius:11px;padding:12px 14px;cursor:pointer;outline:none;
+    transition:border-color .15s,background .15s,transform .12s}
+  .rx-card:hover{border-color:var(--app-border-strong);transform:translateY(-1px)}
+  .rx-card:focus-visible{box-shadow:0 0 0 2px var(--module-accent-ring)}
+  .rx-card.active{border-color:var(--module-accent-ring);background:var(--module-accent-soft)}
+  .rx-card .tag{font-size:10px;font-weight:700;color:var(--module-accent-hover);letter-spacing:.06em;text-transform:uppercase}
+  .rx-card .nm{font-size:13.5px;font-weight:600;color:var(--text-primary);margin:3px 0 2px}
+  .rx-card .ds{font-size:11.5px;color:var(--text-muted);line-height:1.4}
+
+  .rx-preview-wrap{border:1px solid var(--app-border);border-radius:11px;overflow:hidden;
+    background:#fff;height:46vh;min-height:300px;position:relative}
+  .rx-preview-wrap iframe{width:100%;height:100%;border:0;background:#fff;display:block}
+  .rx-state{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;
+    justify-content:center;gap:12px;color:var(--text-muted);font-size:13px;background:var(--app-panel);
+    text-align:center;padding:20px;transition:opacity .15s}
+  .rx-state.hidden{display:none}
+  .rx-spinner{width:30px;height:30px;border-radius:50%;border:3px solid var(--app-border-strong);
+    border-top-color:var(--module-accent);animation:rxspin .8s linear infinite}
+  @keyframes rxspin{to{transform:rotate(360deg)}}
+  .rx-state.error{color:var(--red)}
+
+  .rx-ft{display:flex;align-items:center;gap:12px;padding:14px 20px;border-top:1px solid var(--app-border);flex-wrap:wrap}
+  .rx-ft .spacer{flex:1}
+  .rx-email{display:flex;align-items:center;gap:8px}
+  .rx-email input{background:var(--app-bg);border:1px solid var(--app-border);color:var(--text-primary);
+    border-radius:8px;padding:8px 10px;font-size:12.5px;font-family:var(--font);min-width:210px;transition:border-color .14s}
+  .rx-email input:focus{outline:none;border-color:var(--module-accent-ring)}
+  .rx-act{border:1px solid var(--app-border-strong);background:var(--app-elevated);color:var(--text-primary);
+    padding:8px 15px;border-radius:9px;cursor:pointer;font-size:12.5px;font-weight:600;font-family:var(--font);
+    transition:background .14s,opacity .14s}
+  .rx-act:hover:not(:disabled){background:var(--app-elevated-hover)}
+  .rx-act.primary{background:var(--module-accent-soft);border-color:var(--module-accent-ring);color:var(--module-accent-hover)}
+  .rx-act:disabled{opacity:.4;cursor:not-allowed}
+
+  .rx-toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);z-index:260;
+    background:var(--app-elevated);border:1px solid var(--app-border-strong);color:var(--text-primary);
+    padding:11px 18px;border-radius:10px;font-size:13px;box-shadow:0 12px 40px rgba(0,0,0,.5);animation:rxFade .2s ease}
+  .rx-toast.error{border-color:var(--red-border);color:var(--red)}
+  </style>
+  {% block extra_head %}{% endblock %}
+</head>
+<body>
+<div class="app">
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="brand-inner">
+        <div class="brand-logo">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
+          </svg>
+        </div>
+        <div>
+          <div class="brand-name">PerfMonitor</div>
+          <div class="brand-sub">Django · Channels telemetry</div>
+        </div>
+      </div>
+    </div>
+
+    <nav class="nav">
+      {% set nav_items = [
+        ('dashboard:overview', 'Overview', 'home'),
+        ('dashboard:api_performance', 'API Performance', 'activity'),
+        ('dashboard:websocket', 'WebSocket Health', 'wifi'),
+        ('dashboard:system_resources', 'System Resources', 'monitor'),
+        ('dashboard:database_queries', 'Database Queries', 'database'),
+        ('dashboard:correlation', 'Correlation View', 'bars'),
+        ('dashboard:raw_logs', 'Raw Logs', 'list')
+      ] %}
+      {% for url_name, label, icon_name in nav_items %}
+        <a href="{{ url(url_name) }}?range={{ active_range }}"
+           class="nav-btn {{ 'active' if active_page == url_name }}">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            {% if icon_name == 'home' %}
+              <path d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0h6"></path>
+            {% elif icon_name == 'activity' %}
+              <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
+            {% elif icon_name == 'wifi' %}
+              <path d="M8.111 16.404a5.5 5.5 0 017.778 0M12 20h.01m-7.08-7.071c3.904-3.905 10.236-3.905 14.141 0M1.394 9.393c5.857-5.857 15.355-5.857 21.213 0"></path>
+            {% elif icon_name == 'monitor' %}
+              <rect x="2" y="3" width="20" height="14" rx="2"></rect>
+              <line x1="8" y1="21" x2="16" y2="21"></line>
+              <line x1="12" y1="17" x2="12" y2="21"></line>
+            {% elif icon_name == 'database' %}
+              <ellipse cx="12" cy="5" rx="9" ry="3"></ellipse>
+              <path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"></path>
+              <path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"></path>
+            {% elif icon_name == 'bars' %}
+              <line x1="18" y1="20" x2="18" y2="10"></line>
+              <line x1="12" y1="20" x2="12" y2="4"></line>
+              <line x1="6" y1="20" x2="6" y2="14"></line>
+            {% else %}
+              <line x1="8" y1="6" x2="21" y2="6"></line>
+              <line x1="8" y1="12" x2="21" y2="12"></line>
+              <line x1="8" y1="18" x2="21" y2="18"></line>
+              <line x1="3" y1="6" x2="3.01" y2="6"></line>
+              <line x1="3" y1="12" x2="3.01" y2="12"></line>
+              <line x1="3" y1="18" x2="3.01" y2="18"></line>
+            {% endif %}
+          </svg>
+          {{ label }}
+        </a>
+      {% endfor %}
+    </nav>
+
+    <div class="sidebar-footer">
+      Source of truth: <strong>APIRequestLog · WebSocketEventLog · SystemResourceSnapshot · PerformanceSummary</strong><br/>
+      Raw rows are ~10% sampled; rates &amp; volumes shown are sampling-corrected. Auto-refresh 60s.
+    </div>
+  </aside>
+
+  <main id="mainCol">
+    <div id="pjaxBar" class="pjax-bar"></div>
+    <header class="topbar">
+      <div class="topbar-left">
+        <div>
+          <div class="topbar-title">{% block page_title %}Overview{% endblock %}</div>
+          <div class="topbar-sub">{% block page_subtitle %}Poll-based · summary every 2 min · snapshots every 15 min{% endblock %}</div>
+        </div>
+      </div>
+      <div class="topbar-right">
+        <button class="export-btn" id="exportBtn" type="button" aria-haspopup="dialog" title="Export performance report">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+            <polyline points="7 10 12 15 17 10"></polyline>
+            <line x1="12" y1="15" x2="12" y2="3"></line>
+          </svg>
+          Export
+        </button>
+        <div class="range-seg">
+          {% for r in ['1h', '6h', '24h', '7d', '30d'] %}
+            <button class="range-btn {{ 'active' if active_range == r }}"
+                    data-range="{{ r }}">{{ r }}</button>
+          {% endfor %}
+        </div>
+        <div class="refresh-badge">
+          <div class="pulse" id="liveDot"></div>
+          <span id="lastRefresh">live</span>
+        </div>
+      </div>
+    </header>
+    <div class="content">
+      <div class="page">
+        {% block content %}{% endblock %}
+      </div>
+    </div>
+  </main>
+</div>
+
+<div id="tt"></div>
+
+<!-- Latency terms floating tooltip (position:fixed, escapes overflow:hidden cards) -->
+<div id="perfTip" class="perf-tip hidden" role="tooltip" aria-hidden="true">
+  <div class="tip-row"><span class="tip-term">P50</span><span class="tip-val">Median speed — half of all requests were faster than this</span></div>
+  <div class="tip-row"><span class="tip-term">P95</span><span class="tip-val">95% of requests were faster — 1 in 20 users waited this long</span></div>
+  <div class="tip-row"><span class="tip-term">P99</span><span class="tip-val">Worst-case speed — only 1 in 100 requests was this slow</span></div>
+  <div class="tip-row"><span class="tip-term">DB&nbsp;%</span><span class="tip-val">Share of response time spent waiting for the database</span></div>
+  <div class="tip-row"><span class="tip-term">N+1</span><span class="tip-val">A query that fires once per row instead of once in total</span></div>
+  <div class="tip-footer">Click to open full glossary ↗</div>
+</div>
+
+<!-- Glossary modal -->
+<div id="glossaryOverlay" class="glossary-overlay hidden" role="dialog" aria-modal="true" aria-label="Performance terms glossary">
+  <div class="glossary-modal">
+    <div class="glossary-hd">
+      <div>
+        <div class="glossary-title">Performance Terms — Plain English</div>
+        <div class="glossary-sub">Every metric this dashboard shows, explained without jargon</div>
+      </div>
+      <button class="glossary-close" id="glossaryClose" aria-label="Close">✕</button>
+    </div>
+    <div class="glossary-body">
+
+      <div class="gloss-section">
+        <div class="gloss-section-title">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+          Latency &amp; Response Time
+        </div>
+        <div class="gloss-grid">
+          <div class="gloss-item">
+            <div class="gloss-term">P50 — Median</div>
+            <div class="gloss-def">Half of all requests finished faster than this number. Think of it as the "normal" speed that most users experience day-to-day.</div>
+          </div>
+          <div class="gloss-item">
+            <div class="gloss-term">P95 — 95th Percentile</div>
+            <div class="gloss-def">95% of requests were faster than this. The remaining 5% — roughly 1 in 20 users — waited this long or longer. Good for catching hidden slowdowns.</div>
+          </div>
+          <div class="gloss-item">
+            <div class="gloss-term">P99 — 99th Percentile</div>
+            <div class="gloss-def">99% of requests were faster than this. Only 1 in 100 users hits this delay. It represents your worst-case experience and is the first signal of serious performance issues.</div>
+          </div>
+          <div class="gloss-item">
+            <div class="gloss-term">Avg Response Time</div>
+            <div class="gloss-def">The simple average of all request durations. Useful as a quick headline, but a single slow request can pull the average up — always check percentiles too.</div>
+          </div>
+          <div class="gloss-item">
+            <div class="gloss-term">SLA 300ms</div>
+            <div class="gloss-def">Service Level Agreement threshold. Requests taking longer than 300ms are considered "too slow" by this dashboard's standard. The dashed line on latency charts marks this boundary.</div>
+          </div>
+          <div class="gloss-item">
+            <div class="gloss-term">Response Time (ms)</div>
+            <div class="gloss-def">Total time from when the server received the request to when it finished sending the reply, measured in milliseconds. 1,000 ms = 1 second.</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="gloss-section">
+        <div class="gloss-section-title">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>
+          Database
+        </div>
+        <div class="gloss-grid">
+          <div class="gloss-item">
+            <div class="gloss-term">Avg DB Queries / Request</div>
+            <div class="gloss-def">On average, how many database lookups each API request triggers. Under 6 is healthy. 6–10 is a warning sign. Over 10 usually means an N+1 problem is present.</div>
+          </div>
+          <div class="gloss-item">
+            <div class="gloss-term">N+1 Problem</div>
+            <div class="gloss-def">A common coding mistake: the app fetches a list (1 query), then runs a separate query for every item in that list. Fetching 50 users triggers 51 queries instead of 1. It gets drastically worse as data grows.</div>
+          </div>
+          <div class="gloss-item">
+            <div class="gloss-term">DB Time %</div>
+            <div class="gloss-def">What percentage of the total response time was spent waiting for the database. 30% is normal. Over 50% means the database has become the main bottleneck slowing responses down.</div>
+          </div>
+          <div class="gloss-item">
+            <div class="gloss-term">DB Bottleneck (red rows)</div>
+            <div class="gloss-def">An endpoint where DB Time % exceeds 50% — the database is now the biggest drag on performance. Fixing the queries (or adding caching) here will have the biggest impact on speed.</div>
+          </div>
+          <div class="gloss-item">
+            <div class="gloss-term">Max DB Queries</div>
+            <div class="gloss-def">The highest number of database queries seen on a single request to this endpoint. A very high max alongside a normal average often reveals a specific edge-case triggering an N+1 loop.</div>
+          </div>
+          <div class="gloss-item">
+            <div class="gloss-term">Slow Requests (≥ 500ms)</div>
+            <div class="gloss-def">Individual requests that took 500ms or longer. Listed with their DB query count and DB time so you can see whether the database or something else caused the slowdown.</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="gloss-section">
+        <div class="gloss-section-title">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+          Errors &amp; Traffic
+        </div>
+        <div class="gloss-grid">
+          <div class="gloss-item">
+            <div class="gloss-term">Error Rate</div>
+            <div class="gloss-def">The percentage of all requests that returned an error (HTTP status 400 or above). Under 2% is healthy. Above 5% signals something is actively broken and needs attention.</div>
+          </div>
+          <div class="gloss-item">
+            <div class="gloss-term">4xx Errors</div>
+            <div class="gloss-def">Client-side errors — the request itself was invalid. Examples: 404 Not Found, 401 Unauthorized, 403 Forbidden. Usually caused by bad input, expired tokens, or missing resources.</div>
+          </div>
+          <div class="gloss-item">
+            <div class="gloss-term">5xx Errors</div>
+            <div class="gloss-def">Server-side errors — the server crashed or failed while handling the request. Examples: 500 Internal Server Error, 503 Service Unavailable. These always require investigation.</div>
+          </div>
+          <div class="gloss-item">
+            <div class="gloss-term">Concurrent Requests</div>
+            <div class="gloss-def">How many HTTP requests the server is processing at exactly the same moment. A sudden spike means many users hit the server simultaneously, which can slow everyone down.</div>
+          </div>
+          <div class="gloss-item">
+            <div class="gloss-term">Peak Concurrency</div>
+            <div class="gloss-def">The highest number of simultaneous requests seen in the selected time window. The server is under most strain at this moment.</div>
+          </div>
+          <div class="gloss-item">
+            <div class="gloss-term">~10% Sampled</div>
+            <div class="gloss-def">To save storage, only 1 in 10 requests is stored in the summary table. The "Total Requests" KPI reflects this sampled count. All other tables record every request individually.</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="gloss-section">
+        <div class="gloss-section-title">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8.111 16.404a5.5 5.5 0 017.778 0M12 20h.01m-7.08-7.071c3.904-3.905 10.236-3.905 14.141 0M1.394 9.393c5.857-5.857 15.355-5.857 21.213 0"/></svg>
+          WebSocket
+        </div>
+        <div class="gloss-grid">
+          <div class="gloss-item">
+            <div class="gloss-term">WebSocket</div>
+            <div class="gloss-def">A persistent two-way connection between the browser and server — unlike normal HTTP requests which open and close instantly. Used for real-time features like chat, notifications, and live updates.</div>
+          </div>
+          <div class="gloss-item">
+            <div class="gloss-term">Connect / Disconnect</div>
+            <div class="gloss-def">Connect = a user's browser opened a WebSocket. Disconnect = the connection closed (user left, network dropped, or the server closed it). Active connections = connects minus disconnects.</div>
+          </div>
+          <div class="gloss-item">
+            <div class="gloss-term">Inbound Messages</div>
+            <div class="gloss-def">Messages sent from the browser to the server (e.g. "user is typing", "send this chat message"). Counted per Consumer handler.</div>
+          </div>
+          <div class="gloss-item">
+            <div class="gloss-term">Outbound Messages</div>
+            <div class="gloss-def">Messages pushed from the server to the browser (e.g. "new notification", "another user replied"). High outbound vs inbound means the server is broadcasting a lot.</div>
+          </div>
+          <div class="gloss-item">
+            <div class="gloss-term">Processing Time (ms)</div>
+            <div class="gloss-def">How long the server spent handling one WebSocket message before returning. High processing times here can make real-time features feel laggy.</div>
+          </div>
+          <div class="gloss-item">
+            <div class="gloss-term">Consumer</div>
+            <div class="gloss-def">The Django Channels class that handles a group of WebSocket connections (e.g. ChatConsumer, NotificationConsumer). Each consumer type appears as its own row in the breakdown table.</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="gloss-section">
+        <div class="gloss-section-title">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+          Server Resources
+        </div>
+        <div class="gloss-grid">
+          <div class="gloss-item">
+            <div class="gloss-term">CPU %</div>
+            <div class="gloss-def">How hard the server's processor is working, as a percentage of total capacity. Under 60% is healthy. 60–80% is a warning. Above 80% the server is struggling and requests will slow down.</div>
+          </div>
+          <div class="gloss-item">
+            <div class="gloss-term">RAM %</div>
+            <div class="gloss-def">How much of the server's memory is in use. Above 85% can cause the OS to start swapping to disk, which dramatically slows everything down.</div>
+          </div>
+          <div class="gloss-item">
+            <div class="gloss-term">File Descriptors</div>
+            <div class="gloss-def">An OS-level counter for every open file, socket, and network connection. Each connected user typically takes one. A very high count can mean connections are not being closed properly (a connection leak).</div>
+          </div>
+          <div class="gloss-item">
+            <div class="gloss-term">CPU Heatmap</div>
+            <div class="gloss-def">A 7-day × 24-hour grid showing average CPU usage by day of week and hour of day. Red cells = peak load periods. Useful for scheduling maintenance or identifying predictable traffic spikes.</div>
+          </div>
+          <div class="gloss-item">
+            <div class="gloss-term">Celery Queued Tasks</div>
+            <div class="gloss-def">Background jobs waiting in the queue that no worker has picked up yet. A growing queue means your workers can't keep up with incoming work — you may need more worker processes.</div>
+          </div>
+          <div class="gloss-item">
+            <div class="gloss-term">Celery Active / Reserved</div>
+            <div class="gloss-def">Active = tasks running right now. Reserved = tasks a worker has claimed but not started yet. Both are normal. Only "Queued" growing continuously is a problem.</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="gloss-section">
+        <div class="gloss-section-title">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+          Scale Decision Panel
+        </div>
+        <div class="gloss-grid">
+          <div class="gloss-item">
+            <div class="gloss-term">Healthy <span style="color:var(--green)">●</span></div>
+            <div class="gloss-def">All metrics are within normal ranges. No action needed.</div>
+          </div>
+          <div class="gloss-item">
+            <div class="gloss-term">Monitor <span style="color:var(--amber)">●</span></div>
+            <div class="gloss-def">Metrics are elevated but not critical yet. Watch the trend — if it keeps climbing, take action before it becomes an outage.</div>
+          </div>
+          <div class="gloss-item">
+            <div class="gloss-term">Scale Now <span style="color:var(--red)">●</span></div>
+            <div class="gloss-def">API or server metrics are at dangerous levels. Add more server capacity, increase worker count, or enable autoscaling immediately.</div>
+          </div>
+          <div class="gloss-item">
+            <div class="gloss-term">Optimize Queries <span style="color:var(--red)">●</span></div>
+            <div class="gloss-def">Database metrics are critical. The DB is the main bottleneck. Fix N+1 queries, add database indexes, or introduce caching to reduce query count.</div>
+          </div>
+          <div class="gloss-item">
+            <div class="gloss-term">Redis Blocked Clients</div>
+            <div class="gloss-def">Redis connections waiting on a blocking command (like waiting for a new task in a queue). A small number is normal for Channels/Celery. A large sustained count signals backpressure — jobs are piling up faster than they're consumed.</div>
+          </div>
+          <div class="gloss-item">
+            <div class="gloss-term">PG Connection Pressure</div>
+            <div class="gloss-def">Active DB connections ÷ (active + idle) × 100. Near 100% means almost all connections are in use at once — if it stays this high, new requests may be queued waiting for a free DB connection.</div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- Drill-down drawer (populated client-side from row data attributes) -->
+<div id="drawerOverlay" class="drawer-overlay hidden"></div>
+<aside id="detailDrawer" class="detail-drawer" role="dialog" aria-modal="true" aria-label="Detail">
+  <div class="drawer-hd">
+    <div class="drawer-title" id="drawerTitle">Detail</div>
+    <button class="glossary-close" id="drawerClose" aria-label="Close">✕</button>
+  </div>
+  <div class="drawer-body" id="drawerBody"></div>
+  <div class="drawer-footer" id="drawerFooter"></div>
+</aside>
+
+<!-- Report export modal -->
+<input type="hidden" id="rx-csrf" value="{{ csrf_token }}"/>
+<div id="rxModal" class="rx-overlay hidden" role="dialog" aria-modal="true" aria-label="Export performance report">
+  <div class="rx-modal">
+    <div class="rx-hd">
+      <div>
+        <div class="rx-title">Export performance report</div>
+        <div class="rx-sub">Pick a range and report, preview it, then download as PDF or email it.</div>
+      </div>
+      <button class="rx-close" id="rxClose" type="button" aria-label="Close">✕</button>
+    </div>
+    <div class="rx-body">
+      <div class="rx-field">
+        <div class="rx-label">Date range</div>
+        <div class="rx-seg" id="rxRange" role="group" aria-label="Date range">
+          {% for r in ['1h', '6h', '24h', '7d', '30d', 'all'] %}
+            <button type="button" data-range="{{ r }}" class="{{ 'active' if r == '24h' }}">{{ 'All' if r == 'all' else r }}</button>
+          {% endfor %}
+        </div>
+      </div>
+      <div class="rx-field">
+        <div class="rx-label">Report type</div>
+        <div class="rx-cards" role="radiogroup" aria-label="Report type">
+          {% set report_cards = [
+            ('latency', 'PTR-LAT', 'API Latency & Cost', 'Percentiles, Apdex, per-endpoint DB load & cost attribution.'),
+            ('throughput', 'PTR-THR', 'Throughput & Capacity', 'RPS/TPS, concurrency headroom & error composition.'),
+            ('resources', 'PTR-RES', 'Resource Utilization', 'Per-tier CPU/RAM & dependency saturation.'),
+            ('bottlenecks', 'PTR-BNK', 'Bottleneck Analysis', 'Ranked DB offenders, slow requests & root-cause.')
+          ] %}
+          {% for key, tag, name, desc in report_cards %}
+            <div class="rx-card {{ 'active' if key == 'latency' }}" data-report="{{ key }}"
+                 role="radio" tabindex="0" aria-checked="{{ 'true' if key == 'latency' else 'false' }}">
+              <div class="tag">{{ tag }}</div>
+              <div class="nm">{{ name }}</div>
+              <div class="ds">{{ desc }}</div>
+            </div>
+          {% endfor %}
+        </div>
+      </div>
+      <div class="rx-field">
+        <div class="rx-label">Preview</div>
+        <div class="rx-preview-wrap">
+          <iframe id="rxPreview" title="Report preview" sandbox="allow-same-origin"></iframe>
+          <div class="rx-state" id="rxPreviewState">Pick a range and report, then Generate preview.</div>
+        </div>
+      </div>
+    </div>
+    <div class="rx-ft">
+      <button class="rx-act primary" id="rxGenerate" type="button">Generate preview</button>
+      <div class="spacer"></div>
+      <button class="rx-act" id="rxDownload" type="button" disabled>Download PDF</button>
+      <div class="rx-email">
+        <input type="email" id="rxEmail" placeholder="name@example.com" aria-label="Email address"/>
+        <button class="rx-act" id="rxSend" type="button" disabled>Email</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script src="{{ static('performance/dashboard/dashboard.js') }}?v={{ asset_version }}"></script>
+<script>
+/* Report export modal — inlined; no page reload, all client-side state. */
+(function () {
+  "use strict";
+  var BASE = "/dashboard/reports/";
+  var state = { range: "24h", report: "latency", hasPreview: false, busy: false };
+  var previewSeq = 0;
+
+  function $(s, r) { return (r || document).querySelector(s); }
+  function $all(s, r) { return Array.prototype.slice.call((r || document).querySelectorAll(s)); }
+  function modal() { return document.getElementById("rxModal"); }
+
+  function csrfToken() {
+    var el = document.getElementById("rx-csrf");
+    if (el && el.value) return el.value;
+    var m = document.cookie.match(/csrftoken=([^;]+)/);
+    return m ? m[1] : "";
+  }
+
+  function setState(kind, message) {
+    var wrap = $("#rxPreviewState");
+    if (!wrap) return;
+    if (kind === "hidden") { wrap.classList.add("hidden"); return; }
+    wrap.classList.remove("hidden");
+    wrap.classList.toggle("error", kind === "error");
+    wrap.innerHTML = kind === "loading"
+      ? '<div class="rx-spinner"></div><div>Generating preview…</div>'
+      : "<div>" + (message || "") + "</div>";
+  }
+
+  function syncActions() {
+    var dl = $("#rxDownload"), em = $("#rxSend"), gen = $("#rxGenerate");
+    if (dl) dl.disabled = !state.hasPreview || state.busy;
+    if (em) em.disabled = !state.hasPreview || state.busy;
+    if (gen) { gen.disabled = state.busy; gen.textContent = state.busy ? "Generating…" : "Regenerate preview"; }
+  }
+
+  function payload() { return { report_type: state.report, range: state.range }; }
+
+  function post(path, body) {
+    return fetch(BASE + path, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "X-CSRFToken": csrfToken() },
+      body: JSON.stringify(body),
+    });
+  }
+
+  function toast(message, isError) {
+    var t = document.createElement("div");
+    t.className = "rx-toast" + (isError ? " error" : "");
+    t.textContent = message;
+    document.body.appendChild(t);
+    setTimeout(function () { t.remove(); }, 3800);
+  }
+
+  function generatePreview() {
+    if (state.busy) return;
+    var seq = ++previewSeq;
+    state.busy = true; state.hasPreview = false; syncActions();
+    setState("loading");
+    post("preview/", payload())
+      .then(function (res) { if (!res.ok) throw new Error("HTTP " + res.status); return res.text(); })
+      .then(function (html) {
+        if (seq !== previewSeq) return;            // a newer request superseded this one
+        var iframe = $("#rxPreview");
+        if (iframe) iframe.srcdoc = html;
+        state.hasPreview = true; setState("hidden");
+      })
+      .catch(function () { if (seq === previewSeq) setState("error", "Could not generate the report. Try again."); })
+      .finally(function () { if (seq === previewSeq) { state.busy = false; syncActions(); } });
+  }
+
+  function download() {
+    if (!state.hasPreview || state.busy) return;
+    state.busy = true; syncActions();
+    post("download/", payload())
+      .then(function (res) {
+        if (!res.ok) throw new Error("HTTP " + res.status);
+        var name = "report.pdf", cd = res.headers.get("Content-Disposition") || "";
+        var m = cd.match(/filename="?([^"]+)"?/); if (m) name = m[1];
+        return res.blob().then(function (blob) { return { blob: blob, name: name }; });
+      })
+      .then(function (out) {
+        var url = URL.createObjectURL(out.blob), a = document.createElement("a");
+        a.href = url; a.download = out.name; document.body.appendChild(a); a.click(); a.remove();
+        URL.revokeObjectURL(url);
+      })
+      .catch(function () { toast("PDF download failed.", true); })
+      .finally(function () { state.busy = false; syncActions(); });
+  }
+
+  function sendEmail() {
+    if (!state.hasPreview || state.busy) return;
+    var input = $("#rxEmail"), email = input ? input.value.trim() : "";
+    if (!email) { toast("Enter an email address.", true); if (input) input.focus(); return; }
+    state.busy = true; syncActions();
+    var body = payload(); body.email = email;
+    post("email/", body)
+      .then(function (res) { return res.json().then(function (j) { return { ok: res.status === 202, j: j }; }); })
+      .then(function (out) { toast(out.ok ? (out.j.message || "Report queued for email.") : ((out.j && out.j.error) || "Could not queue email."), !out.ok); })
+      .catch(function () { toast("Could not queue email.", true); })
+      .finally(function () { state.busy = false; syncActions(); });
+  }
+
+  function open() {
+    var m = modal(); if (!m) return;
+    m.classList.remove("hidden");
+    document.addEventListener("keydown", onKey);
+    generatePreview();                              // auto-load default preview (smoother)
+    var gen = $("#rxGenerate"); if (gen) gen.focus();
+  }
+  function close() {
+    var m = modal(); if (m) m.classList.add("hidden");
+    document.removeEventListener("keydown", onKey);
+    var btn = $("#exportBtn"); if (btn) btn.focus();
+  }
+
+  function onKey(e) {
+    if (e.key === "Escape") { close(); return; }
+    if (e.key === "Tab") {
+      var m = modal(); if (!m || m.classList.contains("hidden")) return;
+      var f = $all('button,input,iframe,[tabindex]:not([tabindex="-1"])', m)
+        .filter(function (el) { return !el.disabled && el.offsetParent !== null; });
+      if (!f.length) return;
+      var first = f[0], last = f[f.length - 1];
+      if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+      else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+    }
+  }
+
+  function selectCard(card) {
+    if (!card) return;
+    state.report = card.dataset.report;
+    $all(".rx-card").forEach(function (c) {
+      var on = c === card;
+      c.classList.toggle("active", on);
+      c.setAttribute("aria-checked", on ? "true" : "false");
+    });
+    generatePreview();                              // live-update on change
+  }
+
+  document.addEventListener("click", function (e) {
+    if (e.target.closest("#exportBtn")) { e.preventDefault(); open(); return; }
+    if (e.target.closest("#rxClose") || e.target.id === "rxModal") { close(); return; }
+    var seg = e.target.closest("#rxRange button");
+    if (seg) {
+      state.range = seg.dataset.range;
+      $all("#rxRange button").forEach(function (b) { b.classList.toggle("active", b === seg); });
+      generatePreview(); return;
+    }
+    var card = e.target.closest(".rx-card");
+    if (card) { selectCard(card); return; }
+    if (e.target.closest("#rxGenerate")) { generatePreview(); return; }
+    if (e.target.closest("#rxDownload")) { download(); return; }
+    if (e.target.closest("#rxSend")) { sendEmail(); return; }
+  });
+  // Keyboard-activate report cards (radio semantics).
+  document.addEventListener("keydown", function (e) {
+    var card = e.target.closest && e.target.closest(".rx-card");
+    if (card && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); selectCard(card); }
+  });
+})();
+</script>
+{% block page_scripts %}{% endblock %}
+</body>
+</html>

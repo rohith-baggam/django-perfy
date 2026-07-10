@@ -1,0 +1,81 @@
+{% extends "performance/dashboard/base.html" %}
+
+{% block title %}Correlation View · PerfMonitor{% endblock %}
+{% block page_title %}Correlation View{% endblock %}
+
+{% block content %}
+<div class="section-hd">
+  <h2>Correlation View</h2>
+  <p>Endpoint latency overlaid with host resource pressure · root cause analysis</p>
+</div>
+
+<div class="toolbar mb">
+  <select class="sel" id="corr-endpoint">
+    {% for endpoint in available_endpoints %}
+      <option value="{{ endpoint }}" {{ 'selected' if endpoint == selected_endpoint }}>{{ endpoint }}</option>
+    {% endfor %}
+  </select>
+  <input class="inp" type="datetime-local" id="corr-start" value="{{ selected_start }}"/>
+  <input class="inp" type="datetime-local" id="corr-end" value="{{ selected_end }}"/>
+  <button class="btn-sm" id="corr-analyze">Analyze ↗</button>
+  <span class="sampled-tag">Raw: up to 500 API + 500 resource rows</span>
+</div>
+
+<div class="card mb">
+  <div class="card-hd"><div><div class="card-title">P99 Latency vs Resource Metrics</div><div class="card-sub">Endpoint: {{ selected_endpoint or 'No endpoint available' }}</div></div></div>
+  <div class="chart-wrap"><canvas id="c-corr"></canvas></div>
+</div>
+
+<div class="card mb">
+  <div class="card-hd"><div class="card-title">Insight Summary</div></div>
+  <div class="insight-box">
+    <div style="font-size:13.5px;color:var(--text-secondary);line-height:1.7">
+      Peak P99 was <strong style="color:var(--text-primary)">{{ kpi_p99_ms }}ms</strong> — CPU peaked at <strong style="color:var(--text-primary)">{{ kpi_peak_cpu }}%</strong>, DB queries averaged <strong style="color:var(--text-primary)">{{ kpi_avg_dbq }}</strong>/req, and concurrent requests peaked at <strong style="color:var(--text-primary)">{{ kpi_peak_conc }}</strong>.
+    </div>
+    <div class="metric-row">
+      <div class="metric-chip"><div class="mc-label">P99 Latency</div><div class="mc-val">{{ kpi_p99_ms }}ms</div></div>
+      <div class="metric-chip"><div class="mc-label">Peak CPU</div><div class="mc-val">{{ kpi_peak_cpu }}%</div></div>
+      <div class="metric-chip"><div class="mc-label">Avg DB Queries</div><div class="mc-val">{{ kpi_avg_dbq }}</div></div>
+      <div class="metric-chip"><div class="mc-label">Peak Concurrent</div><div class="mc-val">{{ kpi_peak_conc }}</div></div>
+      <div class="metric-chip"><div class="mc-label">Error Rate</div><div class="mc-val">{{ kpi_error_rate }}%</div></div>
+      <div class="metric-chip"><div class="mc-label">DB % of Resp</div><div class="mc-val">{{ kpi_db_pct }}%</div></div>
+    </div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-hd"><div><div class="card-title">Raw Event Timeline</div><div class="card-sub">Last 12 API requests for the selected endpoint</div></div></div>
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr><th>Time</th><th>Method</th><th>Endpoint</th><th>Status</th><th>Response</th><th>DB Queries</th><th>DB Time</th><th>Concurrent</th></tr></thead>
+      <tbody>
+      {% for r in corr_timeline %}
+        <tr class="js-drilldown {{ 'tr-error' if r.status_code >= 500 else ('tr-slow' if r.response_time_ms >= 500 else '') }}"
+            data-time="{{ r.created_at.strftime('%Y-%m-%d %H:%M:%S') }}"
+            data-method="{{ r.method }}"
+            data-endpoint="{{ r.endpoint }}"
+            data-status="{{ r.status_code }}"
+            data-response="{{ r.response_time_ms }}"
+            data-dbq="{{ r.db_query_count }}"
+            data-dbt="{{ r.db_time_ms }}"
+            data-conc="{{ r.concurrent_requests }}">
+          <td class="mono">{{ r.created_at.strftime('%H:%M') }}</td>
+          <td><span class="method-tag m-{{ r.method | lower }}">{{ r.method }}</span></td>
+          <td class="mono">{{ r.endpoint }}</td>
+          <td>{{ r.status_code }}</td>
+          <td>{{ r.response_time_ms }}ms</td>
+          <td>{{ r.db_query_count }}</td>
+          <td>{{ r.db_time_ms }}ms</td>
+          <td>{{ r.concurrent_requests }}</td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+<div id="page-meta"
+     data-page="correlation"
+     data-api-url="{{ url('dashboard:api_correlation') }}"
+     data-page-url="{{ url('dashboard:correlation') }}"></div>
+<script type="application/json" id="page-data">{{ page_data_json | safe }}</script>
+{% endblock %}

@@ -1,0 +1,110 @@
+{% extends "performance/dashboard/base.html" %}
+
+{% block title %}Raw Logs · PerfMonitor{% endblock %}
+{% block page_title %}Raw Logs{% endblock %}
+
+{% block content %}
+<div class="section-hd">
+  <h2>Raw Logs</h2>
+  <p>APIRequestLog + WebSocketEventLog · paginated · filtered · sampled at 10%</p>
+</div>
+
+<div class="g2">
+  <div class="card">
+    <div class="card-hd"><div><div class="card-title">APIRequestLog</div><div class="card-sub">Raw HTTP samples · amber = slow ≥500ms · red = 5xx</div></div></div>
+    <div class="toolbar mb">
+      <input class="inp" id="raw-search" placeholder="Endpoint search…" style="width:160px" value="{{ selected_search }}"/>
+      <select class="sel" id="raw-method">
+        {% for method in ['all','GET','POST','PUT','PATCH','DELETE'] %}
+          <option value="{{ method }}" {{ 'selected' if selected_method == method }}>{{ 'All methods' if method == 'all' else method }}</option>
+        {% endfor %}
+      </select>
+      <select class="sel" id="raw-status">
+        {% for status in ['all','2xx','4xx','5xx'] %}
+          <option value="{{ status }}" {{ 'selected' if selected_status == status }}>{{ 'All statuses' if status == 'all' else status }}</option>
+        {% endfor %}
+      </select>
+      <select class="sel" id="raw-slow">
+        <option value="all" {{ 'selected' if selected_slow == 'all' }}>All speeds</option>
+        <option value="slow" {{ 'selected' if selected_slow == 'slow' }}>Slow only</option>
+      </select>
+      <button class="btn-sm" id="raw-api-apply">Apply</button>
+    </div>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>Time</th><th>Method</th><th>Endpoint</th><th>Status</th><th>Response</th><th>DB Queries</th><th>DB Time</th><th>Concurrent</th></tr></thead>
+        <tbody>
+        {% for r in raw_api_rows %}
+          <tr class="js-drilldown {{ 'tr-error' if r.status_code >= 500 else ('tr-slow' if r.response_time_ms >= 500 else '') }}"
+              data-time="{{ r.created_at.strftime('%Y-%m-%d %H:%M:%S') }}"
+              data-method="{{ r.method }}"
+              data-endpoint="{{ r.endpoint }}"
+              data-status="{{ r.status_code }}"
+              data-response="{{ r.response_time_ms }}"
+              data-dbq="{{ r.db_query_count }}"
+              data-dbt="{{ r.db_time_ms }}"
+              data-conc="{{ r.concurrent_requests }}">
+            <td class="mono">{{ r.created_at.strftime('%H:%M') }}</td>
+            <td><span class="method-tag m-{{ r.method | lower }}">{{ r.method }}</span></td>
+            <td class="mono">{{ r.endpoint }}</td>
+            <td>{{ r.status_code }}</td>
+            <td>{{ r.response_time_ms }}ms</td>
+            <td>{{ r.db_query_count }}</td>
+            <td>{{ r.db_time_ms }}ms</td>
+            <td>{{ r.concurrent_requests }}</td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-hd"><div><div class="card-title">WebSocketEventLog</div><div class="card-sub">Raw WS events · connect/disconnect/receive/send</div></div></div>
+    <div class="toolbar mb">
+      <select class="sel" id="raw-ws-consumer">
+        <option value="all">All consumers</option>
+        {% for c in ws_consumers %}
+          <option value="{{ c }}" {{ 'selected' if c == selected_ws_consumer }}>{{ c }}</option>
+        {% endfor %}
+      </select>
+      <select class="sel" id="raw-ws-event">
+        <option value="all" {{ 'selected' if selected_ws_event == 'all' }}>All events</option>
+        {% for ev in ['connect','disconnect','receive','send'] %}
+          <option value="{{ ev }}" {{ 'selected' if selected_ws_event == ev }}>{{ ev }}</option>
+        {% endfor %}
+      </select>
+      <button class="btn-sm" id="raw-ws-apply">Apply</button>
+    </div>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>Time</th><th>Consumer</th><th>Event</th><th>Dir</th><th>Msg Size</th><th>Proc ms</th><th>Duration</th></tr></thead>
+        <tbody>
+        {% for w in raw_ws_rows %}
+          <tr class="js-drilldown"
+              data-time="{{ w.created_at.strftime('%Y-%m-%d %H:%M:%S') }}"
+              data-consumer="{{ w.consumer_name }}"
+              data-event="{{ w.event_type }}"
+              data-direction="{{ w.direction }}"
+              data-msg="{{ w.message_size_bytes or '' }}"
+              data-proc="{{ w.processing_time_ms or '' }}">
+            <td class="mono">{{ w.created_at.strftime('%H:%M') }}</td>
+            <td>{{ w.consumer_name }}</td>
+            <td><span class="badge {{ {'connect':'badge-green','disconnect':'badge-red','receive':'badge-accent','send':'badge-amber'}[w.event_type] }}">{{ w.event_type }}</span></td>
+            <td>{{ w.direction }}</td>
+            <td>{{ w.message_size_bytes ~ 'B' if w.message_size_bytes else '—' }}</td>
+            <td>{{ w.processing_time_ms ~ 'ms' if w.processing_time_ms else '—' }}</td>
+            <td>{{ (w.connection_duration_ms // 1000) ~ 's' if w.connection_duration_ms else '—' }}</td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+<div id="page-meta"
+     data-page="raw_logs"
+     data-api-url="{{ url('dashboard:api_raw_logs') }}"
+     data-page-url="{{ url('dashboard:raw_logs') }}"></div>
+<script type="application/json" id="page-data">{{ page_data_json | safe }}</script>
+{% endblock %}

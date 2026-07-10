@@ -1,0 +1,27 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+build/
+dist/
+.pytest_cache/
+.mypy_cache/
+
+# Virtualenvs
+.venv/
+venv/
+env/
+
+# Django
+*.sqlite3
+*.log
+
+# Tooling
+.pre-commit-cache/
+.coverage
+htmlcov/
+
+# Editors
+.vscode/
+.idea/

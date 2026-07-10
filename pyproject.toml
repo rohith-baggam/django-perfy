@@ -1,0 +1,89 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "django-perfy"
+version = "0.1.0"
+description = "API, WebSocket and server performance monitoring for Django, with a built-in admin dashboard and PDF reports."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+authors = [{ name = "Rohith Baggam", email = "baggamrohithraj@gmail.com" }]
+keywords = [
+    "django",
+    "performance",
+    "monitoring",
+    "observability",
+    "websocket",
+    "metrics",
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Environment :: Web Environment",
+    "Framework :: Django",
+    "Framework :: Django :: 4.2",
+    "Framework :: Django :: 5.0",
+    "Framework :: Django :: 5.1",
+    "Framework :: Django :: 5.2",
+    "Framework :: Django :: 6.0",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: System :: Monitoring",
+]
+dependencies = [
+    "Django>=4.2",
+    "celery>=5.2",
+    "psutil>=5.9",
+    "redis>=4.5",
+]
+
+[project.optional-dependencies]
+# PDF report rendering (latency / throughput / bottlenecks / resource reports).
+reports = ["jinja2>=3.1", "weasyprint>=60"]
+# Admin dashboard (Jinja2-rendered pages).
+dashboard = ["jinja2>=3.1"]
+# Everything a full deployment uses.
+all = ["jinja2>=3.1", "weasyprint>=60"]
+# Local development / test tooling.
+dev = [
+    "jinja2>=3.1",
+    "pytest>=7.4",
+    "pytest-django>=4.7",
+    "black>=25.1",
+    "autoflake>=2.3",
+    "build>=1.0",
+    "pre-commit>=3.5",
+]
+
+[project.urls]
+Homepage = "https://github.com/rohithbaggam/django-perfy"
+Repository = "https://github.com/rohithbaggam/django-perfy"
+Issues = "https://github.com/rohithbaggam/django-perfy/issues"
+
+[tool.setuptools.packages.find]
+include = ["django_perfy*"]
+exclude = ["tests*"]
+
+[tool.setuptools.package-data]
+django_perfy = [
+    "templates/**/*.html",
+    "dashboard/templates/**/*.html",
+    "dashboard/static/**/*",
+    "reports/templates/**/*.html",
+]
+
+[tool.black]
+line-length = 88
+target-version = ["py310", "py311", "py312"]
+
+[tool.pytest.ini_options]
+DJANGO_SETTINGS_MODULE = "tests.settings"
+python_files = ["test_*.py", "tests.py"]
+testpaths = ["tests", "django_perfy"]

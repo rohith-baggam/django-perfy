@@ -1,0 +1,118 @@
+{% extends "performance/dashboard/base.html" %}
+
+{% block title %}API Performance · PerfMonitor{% endblock %}
+{% block page_title %}API Performance{% endblock %}
+
+{% block content %}
+<div class="section-hd">
+  <h2>API Performance</h2>
+  <p>Latency bands · DB query correlation · concurrency pressure · Source: PerformanceSummary + APIRequestLog</p>
+</div>
+
+<div class="g4 mb">
+  <div class="card">
+    <div class="kpi-label">Avg Response Time</div>
+    <div class="kpi-val kpi-accent" data-kpi="kpi_avg_rt" data-kpi-suffix="ms">{{ kpi_avg_rt }}ms</div>
+    <div class="kpi-meta">sampling-corrected weighted avg</div>
+  </div>
+  <div class="card">
+    <div class="kpi-label">P50 Latency</div>
+    <div class="kpi-val" style="color:var(--blue)" data-kpi="kpi_p50_ms" data-kpi-suffix="ms">{{ kpi_p50_ms }}ms</div>
+    <div class="kpi-meta">request-weighted p50</div>
+  </div>
+  <div class="card">
+    <div class="kpi-label">P95 Latency</div>
+    <div class="kpi-val" style="color:var(--amber)" data-kpi="kpi_p95_ms" data-kpi-suffix="ms">{{ kpi_p95_ms }}ms</div>
+    <div class="kpi-meta">request-weighted p95</div>
+  </div>
+  {% set db_pct_color = 'var(--red)' if kpi_db_pct > 50 else ('var(--amber)' if kpi_db_pct > 30 else 'var(--green)') %}
+  <div class="card">
+    <div class="kpi-label">DB Time / Response</div>
+    <div class="kpi-val" style="color:{{ db_pct_color }}" data-kpi="kpi_db_pct" data-kpi-suffix="%">{{ kpi_db_pct }}%</div>
+    <div class="kpi-meta">db_time_ms ÷ response_time_ms</div>
+  </div>
+</div>
+
+<div class="g2 mb">
+  <div class="card">
+    <div class="card-hd">
+      <div><div class="card-title">Latency Percentile Bands</div><div class="card-sub">Includes 300ms SLA threshold</div></div>
+      <button class="info-btn" data-tip-trigger data-open-glossary aria-label="What are P50, P95, P99?">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+      </button>
+    </div>
+    <div class="chart-wrap"><canvas id="c-latency-api"></canvas></div>
+  </div>
+  <div class="card">
+    <div class="card-hd"><div><div class="card-title">Response Time vs DB Queries</div><div class="card-sub">Scatter · colored by status class</div></div></div>
+    <div class="chart-wrap"><canvas id="c-scatter"></canvas></div>
+  </div>
+</div>
+
+<div class="card mb">
+  <div class="card-hd"><div><div class="card-title">Concurrent Requests Over Time</div><div class="card-sub">Per-worker concurrency · system-wide ≈ value × worker count</div></div></div>
+  <div class="chart-wrap"><canvas id="c-conc"></canvas></div>
+</div>
+
+<div class="card">
+  <div class="card-hd"><div><div class="card-title">Per-Request Drilldown</div><div class="card-sub">Raw APIRequestLog sample rows</div></div></div>
+  <div class="toolbar mb">
+    <input class="inp" id="api-search" placeholder="Endpoint search…" value="{{ search }}" style="width:180px"/>
+    <select class="sel" id="api-method">
+      {% for method in ['all','GET','POST','PUT','PATCH','DELETE'] %}
+        <option value="{{ method }}" {{ 'selected' if selected_method == method }}>{{ 'All methods' if method == 'all' else method }}</option>
+      {% endfor %}
+    </select>
+    <select class="sel" id="api-status">
+      {% for status in ['all','2xx','4xx','5xx'] %}
+        <option value="{{ status }}" {{ 'selected' if selected_status == status }}>{{ 'All statuses' if status == 'all' else status }}</option>
+      {% endfor %}
+    </select>
+    <select class="sel" id="api-slow">
+      <option value="all" {{ 'selected' if selected_slow == 'all' }}>All speeds</option>
+      <option value="slow" {{ 'selected' if selected_slow == 'slow' }}>Slow only</option>
+    </select>
+    <button class="btn-sm" id="api-filter-apply">Apply</button>
+  </div>
+  <div class="tbl-wrap" id="api-drilldown">
+    <table>
+      <thead><tr><th>Time</th><th>Method</th><th>Endpoint</th><th>Status</th><th>Response</th><th>DB Queries</th><th>DB Time</th><th>Concurrent</th></tr></thead>
+      <tbody>
+      {% for r in drilldown_rows %}
+        <tr class="js-drilldown {{ 'tr-error' if r.status_code >= 500 else ('tr-slow' if r.response_time_ms >= 500 else '') }}"
+            data-time="{{ r.created_at.strftime('%Y-%m-%d %H:%M:%S') }}"
+            data-method="{{ r.method }}"
+            data-endpoint="{{ r.endpoint }}"
+            data-status="{{ r.status_code }}"
+            data-response="{{ r.response_time_ms }}"
+            data-dbq="{{ r.db_query_count }}"
+            data-dbt="{{ r.db_time_ms }}"
+            data-conc="{{ r.concurrent_requests }}">
+          <td class="mono">{{ r.created_at.strftime('%H:%M') }}</td>
+          <td><span class="method-tag m-{{ r.method | lower }}">{{ r.method }}</span></td>
+          <td class="mono">{{ r.endpoint }}</td>
+          <td>{{ r.status_code }}</td>
+          <td>{{ r.response_time_ms }}ms</td>
+          <td>{{ r.db_query_count }}</td>
+          <td>{{ r.db_time_ms }}ms</td>
+          <td>{{ r.concurrent_requests }}</td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% if drilldown_total_pages > 1 %}
+  <div class="pagination">
+    {% if drilldown_prev_url %}<a href="{{ drilldown_prev_url }}" class="btn-sm">← Prev</a>{% else %}<span class="btn-sm-disabled">← Prev</span>{% endif %}
+    <span class="page-info">Page {{ drilldown_page }} of {{ drilldown_total_pages }}</span>
+    {% if drilldown_next_url %}<a href="{{ drilldown_next_url }}" class="btn-sm">Next →</a>{% else %}<span class="btn-sm-disabled">Next →</span>{% endif %}
+  </div>
+  {% endif %}
+</div>
+
+<div id="page-meta"
+     data-page="api_performance"
+     data-api-url="{{ url('dashboard:api_api_performance') }}"
+     data-page-url="{{ url('dashboard:api_performance') }}"></div>
+<script type="application/json" id="page-data">{{ page_data_json | safe }}</script>
+{% endblock %}

@@ -1,0 +1,83 @@
+{% extends "performance/dashboard/base.html" %}
+
+{% block title %}WebSocket Health · PerfMonitor{% endblock %}
+{% block page_title %}WebSocket Health{% endblock %}
+
+{% block content %}
+<div class="section-hd">
+  <h2>WebSocket Health</h2>
+  <p>Connection lifecycle · consumer pressure · Source: WebSocketEventLog + PerformanceSummary</p>
+</div>
+
+<div class="g4 mb">
+  <div class="card">
+    <div class="kpi-label">Active Connections</div>
+    <div class="kpi-val kpi-accent" data-kpi="kpi_ws_active">{{ kpi_ws_active }}</div>
+    <div class="kpi-meta">connects − disconnects in window</div>
+  </div>
+  <div class="card">
+    <div class="kpi-label">Avg Processing Time</div>
+    <div class="kpi-val" style="color:var(--blue)" data-kpi="kpi_ws_avg_proc" data-kpi-suffix="ms" data-kpi-decimals="1">{{ kpi_ws_avg_proc }}ms</div>
+    <div class="kpi-meta">processing_time_ms</div>
+  </div>
+  <div class="card">
+    <div class="kpi-label">Inbound Messages</div>
+    <div class="kpi-val" style="color:var(--module-accent)" data-kpi="kpi_ws_inbound">{{ kpi_ws_inbound | format_number }}</div>
+    <div class="kpi-meta">event_type = receive</div>
+  </div>
+  <div class="card">
+    <div class="kpi-label">Outbound Messages</div>
+    <div class="kpi-val" style="color:var(--purple)" data-kpi="kpi_ws_outbound">{{ kpi_ws_outbound | format_number }}</div>
+    <div class="kpi-meta">event_type = send</div>
+  </div>
+</div>
+
+<div class="g2 mb">
+  <div class="card">
+    <div class="card-hd"><div><div class="card-title">Connection Lifecycle</div><div class="card-sub">Connects vs disconnects by hour</div></div></div>
+    <div class="chart-wrap"><canvas id="c-ws-life"></canvas></div>
+  </div>
+  <div class="card">
+    <div class="card-hd"><div><div class="card-title">Inbound vs Outbound by Consumer</div><div class="card-sub">Grouped by consumer_name</div></div></div>
+    <div class="chart-wrap"><canvas id="c-ws-consumer"></canvas></div>
+  </div>
+</div>
+
+<div class="g2 mb">
+  <div class="card">
+    <div class="card-hd"><div><div class="card-title">Connection Duration Distribution</div><div class="card-sub">Disconnect event durations</div></div></div>
+    <div class="chart-wrap"><canvas id="c-ws-duration"></canvas></div>
+  </div>
+  <div class="card">
+    <div class="card-hd"><div><div class="card-title">Consumer Breakdown</div><div class="card-sub">Per-consumer active connections and processing costs</div></div></div>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>Consumer</th><th>Active</th><th>Avg Proc</th><th>Avg Msg Size</th><th>P95 Proc</th><th>Fanout</th></tr></thead>
+        <tbody>
+        {% for c in consumer_breakdown %}
+          <tr>
+            <td>{{ c.consumer }}</td>
+            <td>{{ c.active }}</td>
+            <td>{{ c.avg_proc }}ms</td>
+            <td>{{ c.avg_msg ~ 'B' if c.avg_msg else '—' }}</td>
+            <td>{{ c.p95_proc ~ 'ms' if c.p95_proc is not none else '—' }}</td>
+            <td class="{{ 'tr-db-heavy' if c.fanout > 5 else '' }}">{{ c.fanout }}×</td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<div class="card mb">
+  <div class="card-hd"><div><div class="card-title">Processing Latency by Event Type</div><div class="card-sub">P50/P95/P99 per consumer · event — surfaces slow connect events</div></div></div>
+  <div class="chart-wrap"><canvas id="c-ws-event-lat"></canvas></div>
+</div>
+
+<div id="page-meta"
+     data-page="websocket"
+     data-api-url="{{ url('dashboard:api_websocket') }}"
+     data-page-url="{{ url('dashboard:websocket') }}"></div>
+<script type="application/json" id="page-data">{{ page_data_json | safe }}</script>
+{% endblock %}

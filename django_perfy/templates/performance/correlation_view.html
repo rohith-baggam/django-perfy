@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>{{ title }}</title>
+<style>
+  body { font-family: monospace; font-size: 13px; padding: 20px; background: #f9f9f9; }
+  h1 { font-size: 18px; }
+  form { margin-bottom: 20px; }
+  label { display: inline-block; width: 80px; }
+  input[type=text] { width: 320px; padding: 3px; }
+  input[type=submit] { margin-left: 10px; padding: 4px 12px; }
+  .error { color: #c00; font-weight: bold; }
+  h2 { font-size: 14px; margin-top: 30px; border-bottom: 1px solid #ccc; padding-bottom: 4px; }
+  table { border-collapse: collapse; width: 100%; margin-top: 8px; }
+  th { background: #333; color: #fff; padding: 5px 8px; text-align: left; }
+  td { padding: 4px 8px; border-bottom: 1px solid #ddd; }
+  tr:hover td { background: #f0f0f0; }
+  .hi-red { background: #ffe0e0 !important; }
+  .hi-yellow { background: #fff8d0 !important; }
+  .note { color: #666; font-size: 11px; margin-top: 4px; }
+</style>
+</head>
+<body>
+<h1>{{ title }}</h1>
+
+<form method="get">
+  <div>
+    <label>Endpoint</label>
+    <input type="text" name="endpoint" value="{{ endpoint }}" placeholder="api/messages/&lt;uuid&gt;/" />
+  </div>
+  <div style="margin-top:6px">
+    <label>Start</label>
+    <input type="text" name="start" value="{{ start }}" placeholder="2026-05-20T14:00:00" />
+  </div>
+  <div style="margin-top:6px">
+    <label>End</label>
+    <input type="text" name="end" value="{{ end }}" placeholder="2026-05-20T15:00:00" />
+  </div>
+  <div style="margin-top:8px">
+    <input type="submit" value="Search" />
+  </div>
+</form>
+
+{% if errors %}
+  {% for e in errors %}<p class="error">{{ e }}</p>{% endfor %}
+{% endif %}
+
+{% if api_rows %}
+<h2>API Request Log ({{ api_rows|length }} rows, max 500)</h2>
+<p class="note">Red = response_time &gt; 1000ms or status &ge; 500. Yellow = response_time &gt; 500ms or status &ge; 400.</p>
+<table>
+  <tr>
+    <th>Time (UTC)</th>
+    <th>Response ms</th>
+    <th>Status</th>
+    <th>DB queries</th>
+    <th>Concurrent</th>
+  </tr>
+  {% for row in api_rows %}
+  {% if row.response_time_ms > 1000 or row.status_code >= 500 %}
+  <tr class="hi-red">
+  {% elif row.response_time_ms > 500 or row.status_code >= 400 %}
+  <tr class="hi-yellow">
+  {% else %}
+  <tr>
+  {% endif %}
+    <td>{{ row.created_at|date:"H:i:s" }}</td>
+    <td>{{ row.response_time_ms }}</td>
+    <td>{{ row.status_code }}</td>
+    <td>{{ row.db_query_count }}</td>
+    <td>{{ row.concurrent_requests }}</td>
+  </tr>
+  {% endfor %}
+</table>
+{% endif %}
+
+{% if resource_rows %}
+<h2>System Resource Snapshots ({{ resource_rows|length }} rows, max 500)</h2>
+<p class="note">Red = cpu &gt; 80% or ram &gt; 85%. Yellow = cpu &gt; 60% or ram &gt; 70%.</p>
+<table>
+  <tr>
+    <th>Time (UTC)</th>
+    <th>Service</th>
+    <th>Type</th>
+    <th>CPU %</th>
+    <th>RAM %</th>
+    <th>Disk %</th>
+    <th>Celery active</th>
+    <th>PG conns</th>
+    <th>Redis clients</th>
+  </tr>
+  {% for row in resource_rows %}
+  {% if row.cpu_percent > 80 or row.ram_percent > 85 %}
+  <tr class="hi-red">
+  {% elif row.cpu_percent > 60 or row.ram_percent > 70 %}
+  <tr class="hi-yellow">
+  {% else %}
+  <tr>
+  {% endif %}
+    <td>{{ row.captured_at|date:"H:i:s" }}</td>
+    <td>{{ row.service_name }}</td>
+    <td>{{ row.service_type }}</td>
+    <td>{{ row.cpu_percent }}</td>
+    <td>{{ row.ram_percent }}</td>
+    <td>{{ row.disk_percent|default:"-" }}</td>
+    <td>{{ row.celery_active_tasks|default:"-" }}</td>
+    <td>{{ row.postgres_active_connections|default:"-" }}</td>
+    <td>{{ row.redis_connected_clients|default:"-" }}</td>
+  </tr>
+  {% endfor %}
+</table>
+{% endif %}
+
+{% if not api_rows and not resource_rows and not errors and endpoint %}
+<p>No data found for the given endpoint and time range.</p>
+{% endif %}
+
+{% if not endpoint %}
+<p>Enter an endpoint pattern and time range to view correlated data.</p>
+{% endif %}
+
+</body>
+</html>

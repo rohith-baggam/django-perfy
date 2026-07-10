@@ -1,0 +1,127 @@
+{% extends "performance/dashboard/base.html" %}
+
+{% block title %}Overview · PerfMonitor{% endblock %}
+{% block page_title %}Overview{% endblock %}
+
+{% block content %}
+<div class="section-hd">
+  <h2>Overview</h2>
+  <p>Decision-making KPIs · Last {{ active_range }} · Sampling-corrected · Source: PerformanceSummary + APIRequestLog</p>
+</div>
+
+<div class="g4 mb" id="overview-kpis">
+  <div class="card" style="border-top:2px solid var(--module-accent)">
+    <div class="kpi-label">Total Requests <span class="sampled-tag">est.</span></div>
+    <div class="kpi-val kpi-accent" data-kpi="kpi_total_requests">{{ kpi_total_requests | format_number }}</div>
+    <div class="kpi-meta">sampling-corrected estimate · ~{{ kpi_throughput_rpm }}/min</div>
+  </div>
+
+  {% set p99_color = 'var(--red)' if kpi_p99_ms > 500 else ('var(--amber)' if kpi_p99_ms > 200 else 'var(--green)') %}
+  {% set p99_status = 'Danger' if kpi_p99_ms > 500 else ('Monitor' if kpi_p99_ms > 200 else 'Healthy') %}
+  <div class="card {{ 'danger' if kpi_p99_ms > 500 else ('warn' if kpi_p99_ms > 200 else '') }}" style="border-top:2px solid {{ p99_color }}">
+    <div class="kpi-label">P99 Latency</div>
+    <div class="kpi-val" style="color:{{ p99_color }}" data-kpi="kpi_p99_ms" data-kpi-suffix="ms">{{ kpi_p99_ms }}ms</div>
+    <div class="kpi-meta">{{ p99_status }} · request-weighted p99</div>
+  </div>
+
+  {% set err_color = 'var(--red)' if kpi_error_rate > 5 else ('var(--amber)' if kpi_error_rate > 2 else 'var(--green)') %}
+  <div class="card {{ 'danger' if kpi_error_rate > 5 else ('warn' if kpi_error_rate > 2 else '') }}" style="border-top:2px solid {{ err_color }}">
+    <div class="kpi-label">Error Rate</div>
+    <div class="kpi-val" style="color:{{ err_color }}" data-kpi="kpi_error_rate" data-kpi-suffix="%" data-kpi-decimals="1">{{ kpi_error_rate }}%</div>
+    <div class="kpi-meta">{{ kpi_error_count }} errors · sampling-corrected</div>
+  </div>
+
+  {% set dbq_color = 'var(--red)' if kpi_avg_dbq > 10 else ('var(--amber)' if kpi_avg_dbq > 6 else 'var(--green)') %}
+  <div class="card {{ 'danger' if kpi_avg_dbq > 10 else ('warn' if kpi_avg_dbq > 6 else '') }}" style="border-top:2px solid {{ dbq_color }}">
+    <div class="kpi-label">Avg DB Queries/req</div>
+    <div class="kpi-val" style="color:{{ dbq_color }}" data-kpi="kpi_avg_dbq" data-kpi-decimals="1">{{ kpi_avg_dbq }}</div>
+    <div class="kpi-meta">{% if kpi_avg_dbq > 10 %}N+1 risk detected{% else %}weighted avg per request{% endif %}</div>
+  </div>
+</div>
+
+<div class="decision-card mt mb">
+  <div class="decision-title">Should you scale? — Real-time decision panel</div>
+  <div class="decision-row dr-{{ scale_api_color }}">
+    <div class="dr-label">Backend / API</div>
+    <div class="dr-detail">P99 <strong>{{ kpi_p99_ms }}ms</strong> · Peak concurrency <strong>{{ kpi_peak_conc }}</strong> · Error rate <strong>{{ kpi_error_rate }}%</strong></div>
+    <span class="badge badge-{{ scale_api_color }}"><span class="badge-dot"></span>{{ scale_api_rec }}</span>
+  </div>
+  <div class="decision-row dr-{{ scale_srv_color }}">
+    <div class="dr-label">Server Resources</div>
+    <div class="dr-detail">Peak CPU <strong>{{ kpi_peak_cpu }}%</strong> · Peak RAM <strong>{{ kpi_peak_ram }}%</strong></div>
+    <span class="badge badge-{{ scale_srv_color }}"><span class="badge-dot"></span>{{ scale_srv_rec }}</span>
+  </div>
+  <div class="decision-row dr-{{ scale_db_color }}">
+    <div class="dr-label">Database</div>
+    <div class="dr-detail">Avg DB queries <strong>{{ kpi_avg_dbq }}</strong> · DB time share <strong>{{ kpi_db_pct }}%</strong></div>
+    <span class="badge badge-{{ scale_db_color }}"><span class="badge-dot"></span>{{ scale_db_rec }}</span>
+  </div>
+</div>
+
+<div class="g2 mb">
+  <div class="card">
+    <div class="card-hd">
+      <div><div class="card-title">Latency Percentile Bands</div><div class="card-sub">P50 / P95 / P99 by summary window</div></div>
+      <button class="info-btn" data-tip-trigger data-open-glossary aria-label="What are P50, P95, P99?">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+      </button>
+    </div>
+    <div class="chart-wrap"><canvas id="c-latency"></canvas></div>
+  </div>
+  <div class="card">
+    <div class="card-hd"><div><div class="card-title">Errors by Status Code</div><div class="card-sub">4xx amber · 5xx red</div></div></div>
+    <div class="chart-wrap"><canvas id="c-errors"></canvas></div>
+  </div>
+</div>
+
+<div class="g2 mb">
+  <div class="card">
+    <div class="card-hd"><div><div class="card-title">Throughput Trend</div><div class="card-sub">Sampling-corrected requests over time</div></div></div>
+    <div class="chart-wrap"><canvas id="c-throughput"></canvas></div>
+  </div>
+  <div class="card">
+    <div class="card-hd"><div><div class="card-title">Error Rate & SLA Compliance</div><div class="card-sub">Error % (left) vs % under {{ 300 }}ms SLA (right)</div></div></div>
+    <div class="chart-wrap"><canvas id="c-errsla"></canvas></div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-hd">
+    <div><div class="card-title">Top Endpoints</div><div class="card-sub">Source: PerformanceSummary + APIRequestLog · Click row → Correlation View</div></div>
+  </div>
+  <div class="tabs">
+    {% for t, label in [('slowest','Slowest by P99'),('errored','Most Errored'),('busy','Busiest')] %}
+      <button class="tab-btn {{ 'active' if active_tab == t }}" data-tab="{{ t }}">{{ label }}</button>
+    {% endfor %}
+  </div>
+  <div class="tbl-wrap" id="endpoints-table">
+    <table>
+      <thead><tr><th>Endpoint</th><th>Total Requests</th><th>P99</th><th>Errors</th><th>Avg DB Queries</th></tr></thead>
+      <tbody>
+      {% for r in top_endpoints %}
+        <tr data-endpoint-nav="{{ r.endpoint_or_consumer }}">
+          <td class="mono">{{ r.endpoint_or_consumer }}</td>
+          <td>{{ r.total_requests }}</td>
+          <td>{{ r.avg_p99 | round | int }}ms</td>
+          <td>{{ r.total_errors }}</td>
+          <td>{{ r.avg_db_queries }}</td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% if ep_total_pages > 1 %}
+  <div class="pagination">
+    {% if ep_prev_url %}<a href="{{ ep_prev_url }}" class="btn-sm">← Prev</a>{% else %}<span class="btn-sm-disabled">← Prev</span>{% endif %}
+    <span class="page-info">Page {{ ep_page }} of {{ ep_total_pages }}</span>
+    {% if ep_next_url %}<a href="{{ ep_next_url }}" class="btn-sm">Next →</a>{% else %}<span class="btn-sm-disabled">Next →</span>{% endif %}
+  </div>
+  {% endif %}
+</div>
+
+<div id="page-meta"
+     data-page="overview"
+     data-api-url="{{ url('dashboard:api_overview') }}"
+     data-page-url="{{ url('dashboard:overview') }}"></div>
+<script type="application/json" id="page-data">{{ page_data_json | safe }}</script>
+{% endblock %}

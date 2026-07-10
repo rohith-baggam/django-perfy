@@ -1,0 +1,102 @@
+{% extends "performance/dashboard/base.html" %}
+
+{% block title %}System Resources · PerfMonitor{% endblock %}
+{% block page_title %}System Resources{% endblock %}
+
+{% block content %}
+<div class="section-hd">
+  <h2>System Resources</h2>
+  <p>Service utilization · scale decisions · Source: SystemResourceSnapshot (15-min cadence)</p>
+</div>
+
+<div class="tabs mb">
+  {% for svc in ['web', 'celery_worker', 'redis', 'postgres'] %}
+    <button class="tab-btn {{ 'active' if active_service == svc }}" data-service="{{ svc }}">{{ svc }}</button>
+  {% endfor %}
+</div>
+
+<div id="resource-alerts" class="mb">
+  {% if celery_queue_peak > 20 %}
+    <div class="note note-amber mb">Celery queue peaked at {{ celery_queue_peak }} pending tasks.</div>
+  {% endif %}
+  {% if redis_blocked_peak > 0 %}
+    <div class="note note-red mb">Redis saw blocked clients in the selected window (peak {{ redis_blocked_peak }}).</div>
+  {% endif %}
+  {% if pg_pressure_max > 75 %}
+    <div class="note note-amber mb">Postgres active connection pressure peaked at {{ pg_pressure_max }}%.</div>
+  {% endif %}
+</div>
+
+<div class="g2 mb service-panel {{ '' if active_service == 'web' else 'hidden' }}" data-panel="web">
+  <div class="card">
+    <div class="card-hd"><div><div class="card-title">CPU % Over Time</div><div class="card-sub">Web service snapshots</div></div></div>
+    <div class="chart-wrap"><canvas id="c-cpu"></canvas></div>
+  </div>
+  <div class="card">
+    <div class="card-hd"><div><div class="card-title">RAM Utilization</div><div class="card-sub">Percent plus used/total context</div></div></div>
+    <div class="chart-wrap"><canvas id="c-ram"></canvas></div>
+  </div>
+</div>
+
+<div class="g2 mb service-panel {{ '' if active_service == 'web' else 'hidden' }}" data-panel="web">
+  <div class="card">
+    <div class="card-hd"><div><div class="card-title">Open File Descriptors & Threads</div><div class="card-sub">Web process pressure</div></div></div>
+    <div class="chart-wrap"><canvas id="c-fds"></canvas></div>
+  </div>
+  <div class="card">
+    <div class="card-hd"><div><div class="card-title">Disk Utilization</div><div class="card-sub">Latest web snapshot</div></div></div>
+    {% set pct = disk_snap.disk_percent | float %}
+    {% set color = 'var(--red)' if pct > 80 else ('var(--amber)' if pct > 60 else 'var(--green)') %}
+    <div style="display:flex;align-items:center;gap:12px;margin-top:12px">
+      <div style="flex:1;height:12px;background:var(--app-elevated);border-radius:999px;overflow:hidden">
+        <div style="width:{{ pct }}%;height:100%;background:{{ color }};border-radius:999px"></div>
+      </div>
+      <span style="color:{{ color }}">{{ pct }}%</span>
+    </div>
+    <div class="kpi-meta mt">{{ disk_snap.disk_used_gb }} / {{ disk_snap.disk_total_gb }} GB</div>
+  </div>
+</div>
+
+<div class="card mb service-panel {{ '' if active_service == 'web' else 'hidden' }}" data-panel="web">
+  <div class="card-hd"><div><div class="card-title">Server Utilization Heatmap</div><div class="card-sub">Last 30 days · avg CPU by weekday × hour</div></div></div>
+  <div id="heatmapWrap"></div>
+</div>
+
+<div class="g2 mb service-panel {{ '' if active_service == 'celery_worker' else 'hidden' }}" data-panel="celery_worker">
+  <div class="card">
+    <div class="card-hd"><div><div class="card-title">Celery Queue Depth</div><div class="card-sub">Queued task count over time</div></div></div>
+    <div class="chart-wrap"><canvas id="c-celeryQ"></canvas></div>
+  </div>
+  <div class="card">
+    <div class="card-hd"><div><div class="card-title">Active / Reserved / Queued Tasks</div><div class="card-sub">Stacked task state view</div></div></div>
+    <div class="chart-wrap"><canvas id="c-celeryTasks"></canvas></div>
+  </div>
+</div>
+
+<div class="g2 mb service-panel {{ '' if active_service == 'redis' else 'hidden' }}" data-panel="redis">
+  <div class="card">
+    <div class="card-hd"><div><div class="card-title">Redis Memory Used</div><div class="card-sub">redis_used_memory_mb</div></div></div>
+    <div class="chart-wrap"><canvas id="c-redisMem"></canvas></div>
+  </div>
+  <div class="card">
+    <div class="card-hd"><div><div class="card-title">Connected vs Blocked Clients</div><div class="card-sub">Client pressure signals</div></div></div>
+    <div class="chart-wrap"><canvas id="c-redisClients"></canvas></div>
+  </div>
+</div>
+
+<div class="g2 mb service-panel {{ '' if active_service == 'postgres' else 'hidden' }}" data-panel="postgres">
+  <div class="card">
+    <div class="card-hd"><div><div class="card-title">Active vs Idle Connections</div><div class="card-sub">Postgres connection pressure</div></div></div>
+    <div class="chart-wrap"><canvas id="c-pgConn"></canvas></div>
+  </div>
+  <div class="card">
+    <div class="card-hd"><div><div class="card-title">Database Size Growth</div><div class="card-sub">postgres_db_size_mb over time</div></div></div>
+    <div class="chart-wrap"><canvas id="c-pgSize"></canvas></div>
+  </div>
+</div>
+<div id="page-meta"
+     data-page="system_resources"
+     data-api-url="{{ url('dashboard:api_resources') }}"
+     data-page-url="{{ url('dashboard:system_resources') }}"></div>
+<script type="application/json" id="page-data">{{ page_data_json | safe }}</script>
+{% endblock %}

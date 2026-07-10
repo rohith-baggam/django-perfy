@@ -1,0 +1,93 @@
+{% extends "performance/dashboard/base.html" %}
+
+{% block title %}Database Queries · PerfMonitor{% endblock %}
+{% block page_title %}Database Queries{% endblock %}
+
+{% block content %}
+<div class="section-hd">
+  <h2>Database Queries</h2>
+  <p>Backend optimization · N+1 detection · DB bottleneck analysis · Source: APIRequestLog</p>
+</div>
+
+{% if kpi_avg_dbq > 10 %}
+  <div class="note note-red mb">Avg {{ kpi_avg_dbq }} queries/request — high query count indicates possible N+1 patterns.</div>
+{% endif %}
+
+<div class="card mb">
+  <div class="card-hd"><div><div class="card-title">Top DB Offenders by Total Time Contribution</div><div class="card-sub">Ranked by est. total DB time (volume × avg) — biggest optimization wins first</div></div></div>
+  <div class="chart-wrap"><canvas id="c-dbOffenders"></canvas></div>
+</div>
+
+<div class="g2 mb">
+  <div class="card">
+    <div class="card-hd"><div><div class="card-title">Endpoint DB Cost</div><div class="card-sub">Amber = N+1 risk · red = DB bottleneck</div></div></div>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>Endpoint</th><th>Avg Queries</th><th>Max Queries</th><th>Avg DB ms</th><th>Max DB ms</th><th>% in DB</th></tr></thead>
+        <tbody>
+        {% for r in endpoint_db_cost %}
+          <tr data-endpoint-nav="{{ r.endpoint }}" class="{{ 'tr-db-heavy' if r.db_pct > 50 else ('tr-warn-n1' if r.avg_queries > 10 else '') }}">
+            <td class="mono">{{ r.endpoint }}</td>
+            <td>{{ r.avg_queries | round(1) }}</td>
+            <td>{{ r.max_queries }}</td>
+            <td>{{ r.avg_db_ms | round | int }}</td>
+            <td>{{ r.max_db_ms }}</td>
+            <td>{{ r.db_pct }}%</td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% if dbc_total_pages > 1 %}
+    <div class="pagination">
+      {% if dbc_prev_url %}<a href="{{ dbc_prev_url }}" class="btn-sm">← Prev</a>{% else %}<span class="btn-sm-disabled">← Prev</span>{% endif %}
+      <span class="page-info">Page {{ dbc_page }} of {{ dbc_total_pages }}</span>
+      {% if dbc_next_url %}<a href="{{ dbc_next_url }}" class="btn-sm">Next →</a>{% else %}<span class="btn-sm-disabled">Next →</span>{% endif %}
+    </div>
+    {% endif %}
+  </div>
+  <div class="card">
+    <div class="card-hd"><div><div class="card-title">Query Count Distribution</div><div class="card-sub">Histogram · bimodal = N+1 signal</div></div></div>
+    <div class="chart-wrap"><canvas id="c-histDb"></canvas></div>
+  </div>
+</div>
+
+<div class="g2 mb">
+  <div class="card">
+    <div class="card-hd"><div><div class="card-title">DB Time vs Response Time</div><div class="card-sub">Scatter · red = DB is bottleneck</div></div></div>
+    <div class="chart-wrap"><canvas id="c-dbScatter"></canvas></div>
+  </div>
+  <div class="card">
+    <div class="card-hd"><div><div class="card-title">Slow Request Patterns</div><div class="card-sub">Requests with response_time_ms ≥ 500ms</div></div></div>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>Endpoint</th><th>Resp ms</th><th>DB Queries</th><th>DB ms</th><th>% DB</th><th>Concurrent</th></tr></thead>
+        <tbody>
+        {% for r in slow_requests %}
+          <tr class="js-drilldown"
+              data-endpoint="{{ r.endpoint }}"
+              data-response="{{ r.response_time_ms }}"
+              data-dbq="{{ r.db_query_count }}"
+              data-dbt="{{ r.db_time_ms }}"
+              data-dbpct="{{ r.db_pct }}"
+              data-conc="{{ r.concurrent_requests }}">
+            <td class="mono">{{ r.endpoint }}</td>
+            <td>{{ r.response_time_ms }}</td>
+            <td>{{ r.db_query_count }}</td>
+            <td>{{ r.db_time_ms }}</td>
+            <td>{{ r.db_pct }}%</td>
+            <td>{{ r.concurrent_requests }}</td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<div id="page-meta"
+     data-page="database_queries"
+     data-api-url="{{ url('dashboard:api_db_queries') }}"
+     data-page-url="{{ url('dashboard:database_queries') }}"></div>
+<script type="application/json" id="page-data">{{ page_data_json | safe }}</script>
+{% endblock %}

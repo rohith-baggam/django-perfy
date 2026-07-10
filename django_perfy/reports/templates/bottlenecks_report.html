@@ -1,0 +1,77 @@
+{% extends "_base.html" %}
+{% block accent %}#b45309{% endblock %}
+{% block subtitle %}Ranked findings from DB-offender analysis, slow-request inspection and scale-recommendation bands. Detection is automatic; resolution status is curated.{% endblock %}
+
+{% block body %}
+{% set max_share = (findings|map(attribute='share_pct')|max) or 1 %}
+<div class="section">
+  <div class="sec-head"><span class="sec-tick"></span><span class="sec-title">Risk headline</span></div>
+  <div class="kpis">
+    <div class="kpi" style="--kc:#0f172a"><div class="kl">Total findings</div><div class="kv">{{ total_findings }}</div><div class="kd">DB offenders this window</div></div>
+    <div class="kpi" style="--kc:#b91c1c"><div class="kl">P1 critical</div><div class="kv">{{ counts.P1 }}</div><div class="kd">DB-bound &gt; 50% or &gt; 10 q/req</div></div>
+    <div class="kpi" style="--kc:#d97706"><div class="kl">P2 high</div><div class="kv">{{ counts.P2 }}</div><div class="kd">&gt; 6 queries/request</div></div>
+    <div class="kpi" style="--kc:#2563eb"><div class="kl">P3 low</div><div class="kv">{{ counts.P3 }}</div><div class="kd">Within healthy bands</div></div>
+  </div>
+  <div class="note">
+    <h4>Platform scale signal</h4>
+    API latency band: <b>{{ scale.scale_api_rec }}</b> (p99 {{ kpi_p99 }} ms) ·
+    Database band: <b>{{ scale.scale_db_rec }}</b> (avg {{ kpi_avg_dbq }} q/req, {{ kpi_db_pct }}% DB-bound).
+  </div>
+</div>
+
+<div class="section">
+  <div class="sec-head"><span class="sec-tick"></span><span class="sec-title">Impact vs effort — what to do first</span></div>
+  <div class="sec-lead"><b>Up</b> = bigger share of total DB time (impact) · <b>right</b> = more queries per request (effort) · <b>bigger</b> = higher impact.</div>
+  <div class="chart"><div class="chart-t">Bottleneck impact / effort matrix</div><div class="chart-s">x: queries/request · y: DB-time share</div>{{ matrix_svg|safe }}</div>
+</div>
+
+<div class="section">
+  <div class="sec-head"><span class="sec-tick"></span><span class="sec-title">Bottleneck register</span></div>
+  <div class="tbl-card"><table>
+    <thead><tr><th>ID</th><th>Endpoint</th><th class="num">Sev</th><th class="num">Est DB time</th><th class="num">DB-time share</th><th class="num">Qry/req</th><th class="num">DB-bound</th>{% if status_curated %}<th>Status</th>{% endif %}</tr></thead>
+    <tbody>
+      {% for f in findings %}
+      <tr {% if f.level == 'P1' %}class="hot"{% endif %}>
+        <td><code>{{ f.id }}</code></td>
+        <td><code>{{ f.endpoint }}</code></td>
+        <td class="num"><span class="sev {{ f.sev_css }}">{{ f.level }}</span></td>
+        <td class="num">{{ f.est_db_ms|format_number }} ms</td>
+        <td class="num"><div class="dcell"><span class="dbar"><i style="width:{{ (f.share_pct / max_share * 100)|round(0) }}%;background:#fcd34d"></i></span><span class="dval">{{ f.share_pct }}%</span></div></td>
+        <td class="num">{{ f.avg_db_queries }}</td>
+        <td class="num">{{ f.db_pct }}%</td>
+        {% if status_curated %}<td>{{ f.status or '—' }}</td>{% endif %}
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table></div>
+  {% if not status_curated %}
+  <div class="note"><h4>Resolution status is uncurated</h4>
+  No resolution-status field exists in the telemetry models. This register shows the
+  <b>automatically detected</b> half only. To track ownership/status, populate
+  <code>PERFORMANCE_REPORTS["BOTTLENECK_STATUS"]</code> keyed by finding ID
+  (e.g. <code>{"{{ findings[0].id if findings else 'PTR-BNK-F01' }}": "In progress — @owner"}</code>).</div>
+  {% endif %}
+</div>
+
+<div class="section">
+  <div class="sec-head"><span class="sec-tick"></span><span class="sec-title">Slow-request evidence (≥ 500 ms)</span></div>
+  <div class="sec-lead">Individual slow requests captured at 100% (force-kept), newest-slowest first.</div>
+  <div class="tbl-card"><table>
+    <thead><tr><th>Endpoint</th><th class="num">Response</th><th class="num">Queries</th><th class="num">DB time</th><th class="num">DB %</th><th class="num">Concurrent</th></tr></thead>
+    <tbody>
+      {% for s in slow_requests %}
+      <tr {% if s.db_pct >= 50 %}class="hot"{% endif %}>
+        <td><code>{{ s.endpoint }}</code></td>
+        <td class="num">{{ s.response_time_ms }} ms</td>
+        <td class="num">{{ s.db_query_count }}</td>
+        <td class="num">{{ s.db_time_ms }} ms</td>
+        <td class="num">{{ s.db_pct }}%</td>
+        <td class="num">{{ s.concurrent_requests }}</td>
+      </tr>
+      {% else %}
+      <tr><td colspan="6" style="text-align:center;color:#64748b">No slow requests in this window.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table></div>
+</div>
+{% endblock %}
