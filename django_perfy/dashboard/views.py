@@ -479,6 +479,30 @@ def _top_endpoints(
     return summary_rows, active_tab, page, total_pages
 
 
+def _headers_json(value: dict[str, Any] | None) -> str:
+    return json.dumps(value or {}, ensure_ascii=False)
+
+
+# Fields captured on APIRequestLog for the row-detail drawer (headers/body
+# opt-in via CAPTURE_HEADERS/CAPTURE_BODY, server_ip is always populated).
+CAPTURE_FIELDS: tuple[str, ...] = (
+    "request_headers",
+    "response_headers",
+    "request_body",
+    "response_body",
+    "server_ip",
+)
+
+
+def _attach_capture_fields(rows: list[dict[str, Any]]) -> None:
+    """Pop the raw capture columns and add template/JS-ready equivalents."""
+    for row in rows:
+        row["request_headers_json"] = _headers_json(row.pop("request_headers", None))
+        row["response_headers_json"] = _headers_json(row.pop("response_headers", None))
+        row["request_body"] = row.pop("request_body", None) or ""
+        row["response_body"] = row.pop("response_body", None) or ""
+
+
 def _api_drilldown_rows(
     request, since: datetime, limit: int = 16
 ) -> tuple[list[dict[str, Any]], int, int]:
@@ -522,8 +546,10 @@ def _api_drilldown_rows(
             "db_query_count",
             "db_time_ms",
             "concurrent_requests",
+            *CAPTURE_FIELDS,
         )[offset : offset + limit]
     )
+    _attach_capture_fields(rows)
     return rows, page, total_pages
 
 
@@ -1196,8 +1222,10 @@ def _correlation_context(request) -> dict[str, Any]:
             "db_query_count",
             "db_time_ms",
             "concurrent_requests",
+            *CAPTURE_FIELDS,
         )[:12]
     )
+    _attach_capture_fields(corr_timeline)
 
     corr_chart = {
         "p99": [

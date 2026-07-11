@@ -69,6 +69,13 @@ PERFORMANCE_MONITOR = {
     "USER_ID_SALT": "change-me",        # salts hashed user ids
     "SERVICES": [],
 
+    # Off by default: headers/bodies routinely carry session cookies/auth
+    # tokens/PII. See docs/configuration.md for the full redaction options.
+    "CAPTURE_HEADERS": False,
+    "REDACTED_HEADERS": ["authorization", "cookie", "set-cookie", "x-api-key"],
+    "CAPTURE_BODY": False,
+    "REDACTED_BODY_FIELDS": ["password", "token", "secret", "card_number"],
+
     # Store telemetry in the default DB, or point at a secondary alias:
     "DATABASE": "default",
 }
@@ -122,14 +129,22 @@ TEMPLATES = [
     },
     # ... your existing DjangoTemplates backend (APP_DIRS: True) ...
 ]
-
-STATICFILES_DIRS = [django_perfy.DASHBOARD_STATIC_DIR]
 ```
+
+The dashboard's CSS/JS ship inside the package (`django_perfy/static/`) and are
+found automatically by `AppDirectoriesFinder` — no `STATICFILES_DIRS` entry
+needed. Just run `collectstatic` for production.
 
 ```python
 # urls.py
 urlpatterns += [path("performance/", include("django_perfy.urls"))]
 ```
+
+> **Serving the dashboard's CSS/JS:** `runserver` serves them automatically, but
+> gunicorn/uWSGI/daphne do **not** serve static files — under those the
+> dashboard loads unstyled until you `collectstatic` and serve `STATIC_ROOT`
+> (e.g. with WhiteNoise or nginx). See
+> [docs/dashboard-and-reports.md](docs/dashboard-and-reports.md#serving-those-static-files-important-under-gunicornuwsgi).
 
 ## Storing telemetry in a secondary database
 

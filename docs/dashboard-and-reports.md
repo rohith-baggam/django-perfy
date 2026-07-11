@@ -50,13 +50,63 @@ TEMPLATES = [
 
 ### 2. Static assets
 
-```python
-import django_perfy
+The dashboard's CSS/JS ship **inside the package** at `django_perfy/static/`, so
+Django's default `AppDirectoriesFinder` discovers them automatically — exactly
+like `django.contrib.admin`. **No `STATICFILES_DIRS` entry is needed.**
 
-STATICFILES_DIRS = [django_perfy.DASHBOARD_STATIC_DIR]
+Just make sure the staticfiles app is installed (it is, by default) and run
+`collectstatic` for production:
+
+```bash
+python manage.py collectstatic --noinput
 ```
 
-Run `collectstatic` as usual for production.
+#### Serving those static files (important under gunicorn/uWSGI)
+
+The dashboard pages link to `dashboard.css` / `dashboard.js` via `STATIC_URL`.
+Django's dev server (`runserver`) serves those automatically, **but a WSGI/ASGI
+app server such as gunicorn, uWSGI or daphne does not serve static files at
+all** — so under gunicorn the dashboard loads unstyled (CSS/JS return 404) even
+with `DEBUG = True`. This is standard Django behaviour, not specific to
+django-perfy.
+
+Pick one of the usual approaches:
+
+- **WhiteNoise** (simplest — no extra service):
+
+  ```bash
+  pip install whitenoise
+  ```
+
+  ```python
+  MIDDLEWARE = [
+      "django.middleware.security.SecurityMiddleware",
+      "whitenoise.middleware.WhiteNoiseMiddleware",  # right after security
+      # ... the rest ...
+  ]
+
+  STORAGES = {
+      "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
+      "staticfiles": {
+          "BACKEND": "whitenoise.storage.CompressedStaticFilesStorage"
+      },
+  }
+  ```
+
+  ```bash
+  python manage.py collectstatic --noinput
+  ```
+
+  gunicorn now serves the dashboard assets from `STATIC_ROOT`.
+
+- **Reverse proxy** (nginx/Apache): run `collectstatic`, then serve `STATIC_ROOT`
+  at `STATIC_URL`:
+
+  ```nginx
+  location /static/ { alias /path/to/STATIC_ROOT/; }
+  ```
+
+- **Dev only**: `runserver` serves them with no extra setup.
 
 ### 3. URLs
 

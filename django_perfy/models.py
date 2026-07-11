@@ -14,6 +14,11 @@ class APIRequestLog(models.Model):
     db_time_ms = models.PositiveIntegerField(default=0)
     concurrent_requests = models.PositiveIntegerField(default=0)
     user_hash = models.CharField(max_length=64, null=True, blank=True)
+    request_headers = models.JSONField(null=True, blank=True)
+    response_headers = models.JSONField(null=True, blank=True)
+    request_body = models.TextField(null=True, blank=True)
+    response_body = models.TextField(null=True, blank=True)
+    server_ip = models.GenericIPAddressField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:

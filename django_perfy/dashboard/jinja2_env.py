@@ -8,7 +8,10 @@ from django.templatetags.static import static
 from django.urls import reverse
 
 _STATIC_DIR = os.path.join(
-    os.path.dirname(__file__), "static", "performance", "dashboard"
+    os.path.dirname(os.path.dirname(__file__)),
+    "static",
+    "performance",
+    "dashboard",
 )
 
 

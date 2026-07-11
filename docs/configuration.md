@@ -20,6 +20,18 @@ PERFORMANCE_MONITOR = {
     "MONITOR_POSTGRES": True,
     "MONITOR_REDIS": True,
     "DATABASE": "default",
+    "CAPTURE_HEADERS": False,
+    "REDACTED_HEADERS": [
+        "authorization", "cookie", "set-cookie", "x-api-key",
+        "x-auth-token", "proxy-authorization", "x-csrftoken",
+    ],
+    "CAPTURE_BODY": False,
+    "MAX_BODY_BYTES": 8192,
+    "REDACTED_BODY_FIELDS": [
+        "password", "token", "access_token", "refresh_token", "secret",
+        "api_key", "card_number", "cvv", "cvv2", "ssn", "pin",
+    ],
+    "SERVER_IP": None,
 
     # Report email (see docs/email.md)
     "EMAIL_ENABLED": False,
@@ -51,6 +63,12 @@ PERFORMANCE_MONITOR = {
 | `MONITOR_POSTGRES` | bool | `True` | Collect Postgres metrics in resource snapshots. |
 | `MONITOR_REDIS` | bool | `True` | Collect Redis metrics in resource snapshots. |
 | `DATABASE` | str | `"default"` | DB alias every performance model reads from and writes to. See [docs/secondary-database.md](secondary-database.md). |
+| `CAPTURE_HEADERS` | bool | `False` | When `True`, store request/response headers on `APIRequestLog` (`request_headers`/`response_headers`). Off by default — headers routinely carry session cookies and auth tokens. Only sampled requests (per `SAMPLING_RATE`/`SLOW_REQUEST_THRESHOLD_MS`) get headers captured, same as every other field. |
+| `REDACTED_HEADERS` | list[str] | auth/cookie/api-key names | Header names (case-insensitive) stored as `"[REDACTED]"` instead of their real value when `CAPTURE_HEADERS` is on. |
+| `CAPTURE_BODY` | bool | `False` | When `True`, store request/response bodies on `APIRequestLog` (`request_body`/`response_body`). Independent of `CAPTURE_HEADERS` — bodies are higher-sensitivity and higher-volume. Binary content types (images, PDFs, `multipart/form-data`, ...) are recorded as `"[binary omitted]"` instead of raw bytes. Streaming responses are skipped. |
+| `MAX_BODY_BYTES` | int | `8192` | Captured bodies are truncated past this size. |
+| `REDACTED_BODY_FIELDS` | list[str] | password/token/secret/... | JSON field names (case-insensitive, checked recursively) replaced with `"[REDACTED]"` when a captured body parses as JSON. Non-JSON bodies (form-encoded, HTML) are captured as truncated raw text with no field-level redaction. |
+| `SERVER_IP` | str \| `None` | `None` | Recorded on every captured row as `server_ip`. Auto-detected from the host (`socket.gethostbyname(socket.gethostname())`) when left blank — set explicitly if auto-detection picks the wrong interface (e.g. behind Docker/NAT). |
 | Email keys | | | See [docs/email.md](email.md). |
 
 ## `SERVICES`

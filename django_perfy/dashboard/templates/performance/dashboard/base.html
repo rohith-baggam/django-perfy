@@ -95,7 +95,12 @@
   </style>
   {% block extra_head %}{% endblock %}
 </head>
-<body>
+<body
+  data-correlation-url="{{ url('dashboard:correlation') }}"
+  data-reports-preview-url="{{ url('reports:preview') }}"
+  data-reports-download-url="{{ url('reports:download') }}"
+  data-reports-email-url="{{ url('reports:email') }}"
+>
 <div class="app">
   <aside class="sidebar">
     <div class="brand">
@@ -504,7 +509,11 @@
 /* Report export modal — inlined; no page reload, all client-side state. */
 (function () {
   "use strict";
-  var BASE = "/dashboard/reports/";
+  var URLS = {
+    preview: document.body.dataset.reportsPreviewUrl,
+    download: document.body.dataset.reportsDownloadUrl,
+    email: document.body.dataset.reportsEmailUrl,
+  };
   var state = { range: "24h", report: "latency", hasPreview: false, busy: false };
   var previewSeq = 0;
 
@@ -539,8 +548,8 @@
 
   function payload() { return { report_type: state.report, range: state.range }; }
 
-  function post(path, body) {
-    return fetch(BASE + path, {
+  function post(url, body) {
+    return fetch(url, {
       method: "POST",
       headers: { "Content-Type": "application/json", "X-CSRFToken": csrfToken() },
       body: JSON.stringify(body),
@@ -560,7 +569,7 @@
     var seq = ++previewSeq;
     state.busy = true; state.hasPreview = false; syncActions();
     setState("loading");
-    post("preview/", payload())
+    post(URLS.preview, payload())
       .then(function (res) { if (!res.ok) throw new Error("HTTP " + res.status); return res.text(); })
       .then(function (html) {
         if (seq !== previewSeq) return;            // a newer request superseded this one
@@ -575,7 +584,7 @@
   function download() {
     if (!state.hasPreview || state.busy) return;
     state.busy = true; syncActions();
-    post("download/", payload())
+    post(URLS.download, payload())
       .then(function (res) {
         if (!res.ok) throw new Error("HTTP " + res.status);
         var name = "report.pdf", cd = res.headers.get("Content-Disposition") || "";
@@ -597,7 +606,7 @@
     if (!email) { toast("Enter an email address.", true); if (input) input.focus(); return; }
     state.busy = true; syncActions();
     var body = payload(); body.email = email;
-    post("email/", body)
+    post(URLS.email, body)
       .then(function (res) { return res.json().then(function (j) { return { ok: res.status === 202, j: j }; }); })
       .then(function (out) { toast(out.ok ? (out.j.message || "Report queued for email.") : ((out.j && out.j.error) || "Could not queue email."), !out.ok); })
       .catch(function () { toast("Could not queue email.", true); })

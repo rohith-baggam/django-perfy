@@ -13,7 +13,13 @@ def collect_process_metrics(service_name: str, service_type: str) -> dict[str, A
 
     proc = psutil.Process(os.getpid())
 
-    cpu = proc.cpu_percent(interval=0.1)
+    # psutil.Process.cpu_percent() is relative to a single core, so a process
+    # using several cores can read well past 100% (e.g. 201.6% on 2 cores
+    # saturated). Normalize by logical core count so this reads the same way
+    # Zabbix/Prometheus/node_exporter report process CPU: 0-100% of total
+    # host capacity.
+    cpu_cores = psutil.cpu_count() or 1
+    cpu = proc.cpu_percent(interval=0.1) / cpu_cores
     mem = proc.memory_info()
     ram_used_mb = mem.rss // (1024 * 1024)
 

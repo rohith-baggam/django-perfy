@@ -43,7 +43,12 @@
               data-response="{{ r.response_time_ms }}"
               data-dbq="{{ r.db_query_count }}"
               data-dbt="{{ r.db_time_ms }}"
-              data-conc="{{ r.concurrent_requests }}">
+              data-conc="{{ r.concurrent_requests }}"
+              data-server-ip="{{ r.server_ip or '' }}"
+              data-headers-req="{{ r.request_headers_json }}"
+              data-headers-res="{{ r.response_headers_json }}"
+              data-body-req="{{ r.request_body }}"
+              data-body-res="{{ r.response_body }}">
             <td class="mono">{{ r.created_at.strftime('%H:%M') }}</td>
             <td><span class="method-tag m-{{ r.method | lower }}">{{ r.method }}</span></td>
             <td class="mono">{{ r.endpoint }}</td>

@@ -86,7 +86,8 @@ TEMPLATES = [
 ]
 
 STATIC_URL = "/static/"
-STATICFILES_DIRS = [django_perfy.DASHBOARD_STATIC_DIR]
+# No STATICFILES_DIRS needed: the dashboard assets live at django_perfy/static/
+# and are found automatically by AppDirectoriesFinder.
 
 # Run Celery tasks inline so tests don't need a broker.
 CELERY_TASK_ALWAYS_EAGER = True

@@ -75,7 +75,7 @@ exclude = ["tests*"]
 django_perfy = [
     "templates/**/*.html",
     "dashboard/templates/**/*.html",
-    "dashboard/static/**/*",
+    "static/**/*",
     "reports/templates/**/*.html",
 ]
 

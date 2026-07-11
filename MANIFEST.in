@@ -4,7 +4,7 @@ include CHANGELOG.md
 
 recursive-include django_perfy/templates *.html
 recursive-include django_perfy/dashboard/templates *.html
-recursive-include django_perfy/dashboard/static *
+recursive-include django_perfy/static *
 recursive-include django_perfy/reports/templates *.html
 
 recursive-include docs *.md

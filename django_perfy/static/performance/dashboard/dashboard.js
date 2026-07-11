@@ -25,6 +25,7 @@
     page: "",
     apiUrl: "",
     pageUrl: "",
+    correlationUrl: "/correlation/",
     data: {},
   };
   let refreshTimer = null;
@@ -197,6 +198,7 @@
     state.page = meta ? meta.dataset.page || "" : "";
     state.apiUrl = meta ? meta.dataset.apiUrl || "" : "";
     state.pageUrl = meta ? meta.dataset.pageUrl || "" : "";
+    state.correlationUrl = document.body.dataset.correlationUrl || "/correlation/";
     const dataEl = $("#page-data");
     if (dataEl) {
       try {
@@ -841,6 +843,44 @@
     return `<div class="drw-row"><span class="drw-k">${label}</span><span class="drw-v">${value}</span></div>`;
   }
 
+  function escapeHtml(value) {
+    return String(value)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;");
+  }
+
+  function detailsBlock(label, innerHtml) {
+    if (!innerHtml) return "";
+    return `<details class="drw-details" open><summary>${escapeHtml(label)}</summary><div class="drw-details-body">${innerHtml}</div></details>`;
+  }
+
+  function headersRows(json) {
+    let headers;
+    try {
+      headers = JSON.parse(json || "{}");
+    } catch (e) {
+      return "";
+    }
+    const keys = Object.keys(headers);
+    if (!keys.length) return "";
+    return keys
+      .map((k) => `<div class="drw-row"><span class="drw-k">${escapeHtml(k)}</span><span class="drw-v">${escapeHtml(headers[k])}</span></div>`)
+      .join("");
+  }
+
+  function bodyPre(raw) {
+    if (!raw) return "";
+    let text = raw;
+    try {
+      text = JSON.stringify(JSON.parse(raw), null, 2);
+    } catch (e) {
+      /* not JSON — show as captured */
+    }
+    return `<pre class="drw-pre">${escapeHtml(text)}</pre>`;
+  }
+
   function openRowDrawer(tr) {
     const d = tr.dataset;
     let body = "";
@@ -853,17 +893,22 @@
     body += drawerRow("DB time", d.dbt ? d.dbt + " ms" : "");
     body += drawerRow("DB share", d.dbpct ? d.dbpct + "%" : "");
     body += drawerRow("Concurrent", d.conc);
+    body += drawerRow("Server IP", d.serverIp);
     body += drawerRow("Consumer", d.consumer);
     body += drawerRow("Event", d.event);
     body += drawerRow("Direction", d.direction);
     body += drawerRow("Msg size", d.msg ? d.msg + " B" : "");
     body += drawerRow("Proc time", d.proc ? d.proc + " ms" : "");
+    body += detailsBlock("Request headers", headersRows(d.headersReq));
+    body += detailsBlock("Response headers", headersRows(d.headersRes));
+    body += detailsBlock("Request body", bodyPre(d.bodyReq));
+    body += detailsBlock("Response body", bodyPre(d.bodyRes));
     let footer = "";
     if (d.endpoint) {
       const params = new URLSearchParams();
       params.set("range", currentParams().get("range") || "24h");
       params.set("endpoint", d.endpoint);
-      footer = `<a class="btn-sm" id="drawerCorr" href="/dashboard/correlation/?${params.toString()}">Open in Correlation ↗</a>`;
+      footer = `<a class="btn-sm" id="drawerCorr" href="${state.correlationUrl}?${params.toString()}">Open in Correlation ↗</a>`;
     }
     openRowDrawerRender(d, body, footer);
   }
@@ -946,7 +991,7 @@
       const params = new URLSearchParams();
       params.set("range", currentParams().get("range") || "24h");
       params.set("endpoint", epRow.dataset.endpointNav);
-      navigate("/dashboard/correlation/?" + params.toString());
+      navigate(state.correlationUrl + "?" + params.toString());
       return;
     }
 

@@ -102,8 +102,12 @@ class PerformanceMiddleware:
 
         try:
             from django_perfy.utils import (
+                get_server_ip,
+                get_settings,
                 hash_user_id,
                 normalize_url,
+                redact_body,
+                redact_headers,
                 should_sample,
             )
 
@@ -125,6 +129,35 @@ class PerformanceMiddleware:
                     else None
                 )
 
+                cfg = get_settings()
+
+                request_headers: dict[str, str] | None = None
+                response_headers: dict[str, str] | None = None
+                if cfg.get("CAPTURE_HEADERS"):
+                    try:
+                        request_headers = redact_headers(dict(request.headers))
+                        response_headers = redact_headers(dict(response.items()))
+                    except Exception:
+                        pass
+
+                request_body: str | None = None
+                response_body: str | None = None
+                if cfg.get("CAPTURE_BODY"):
+                    try:
+                        request_body = redact_body(
+                            request.body, request.content_type
+                        )
+                    except Exception:
+                        pass
+                    try:
+                        if not getattr(response, "streaming", False):
+                            response_body = redact_body(
+                                response.content,
+                                response.get("Content-Type", ""),
+                            )
+                    except Exception:
+                        pass
+
                 payload: dict[str, Any] = {
                     "endpoint": normalize_url(request),
                     "method": request.method,
@@ -135,6 +168,11 @@ class PerformanceMiddleware:
                     "db_time_ms": db_wrapper.total_ms,
                     "concurrent_requests": concurrent,
                     "user_hash": user_hash,
+                    "request_headers": request_headers,
+                    "response_headers": response_headers,
+                    "request_body": request_body,
+                    "response_body": response_body,
+                    "server_ip": get_server_ip(),
                 }
                 # Non-blocking: submit to thread pool, never waits for result.
                 _log_executor.submit(_write_api_log, payload)
