@@ -1,5 +1,10 @@
 # django-perfy
 
+[![PyPI version](https://img.shields.io/pypi/v/django-perfy.svg)](https://pypi.org/project/django-perfy/)
+[![Python versions](https://img.shields.io/pypi/pyversions/django-perfy.svg)](https://pypi.org/project/django-perfy/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://github.com/rohith-baggam/django-perfy/blob/main/LICENSE)
+[![Documentation](https://img.shields.io/badge/docs-mkdocs--material-blue.svg)](https://rohith-baggam.github.io/django-perfy/)
+
 **API, WebSocket and server performance monitoring for Django** — with a
 built-in admin dashboard, PDF reports, and the option to keep all telemetry in a
 separate database.
@@ -9,7 +14,12 @@ events and host resource usage (CPU / memory / Redis / Postgres), rolls them up
 into summaries, and surfaces everything through a dashboard and downloadable PDF
 reports.
 
-📖 **Full documentation: <https://rohith-baggam.github.io/django-perfy/>**
+## Links
+
+- 📖 **Documentation:** <https://rohith-baggam.github.io/django-perfy/>
+- 💻 **Source code (GitHub):** <https://github.com/rohith-baggam/django-perfy/>
+- 🐛 **Issues:** <https://github.com/rohith-baggam/django-perfy/issues>
+- 📦 **PyPI:** <https://pypi.org/project/django-perfy/>
 
 ---
 
