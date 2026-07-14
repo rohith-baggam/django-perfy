@@ -1,0 +1,79 @@
+site_name: django-perfy
+site_description: API, WebSocket and server performance monitoring for Django, with a built-in admin dashboard and PDF reports.
+site_url: https://rohith-baggam.github.io/django-perfy/
+repo_name: rohith-baggam/django-perfy
+repo_url: https://github.com/rohith-baggam/django-perfy
+edit_uri: edit/main/docs/
+
+theme:
+  name: material
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+  features:
+    - navigation.instant
+    - navigation.tracking
+    - navigation.indexes
+    - navigation.top
+    - navigation.footer
+    - toc.follow
+    - search.suggest
+    - search.highlight
+    - search.share
+    - content.code.copy
+    - content.code.annotate
+    - content.tooltips
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - md_in_html
+  - tables
+  - toc:
+      permalink: true
+  - pymdownx.details
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.superfences
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
+
+nav:
+  - Home: index.md
+  - Why django-perfy: why-django-perfy.md
+  - Getting started: getting-started.md
+  - Installation: installation.md
+  - Dependencies: dependencies.md
+  - Configuration: configuration.md
+  - Features:
+      - features/index.md
+      - API monitoring: features/api-monitoring.md
+      - WebSocket monitoring: features/websocket-monitoring.md
+      - Resource snapshots & rollups: features/resource-snapshots.md
+      - Dashboard & reports: features/dashboard-and-reports.md
+  - Guides:
+      - guides/index.md
+      - Secondary database: guides/secondary-database.md
+      - Emailing reports: guides/email.md
+      - Celery setup: guides/celery-setup.md
+  - Reference:
+      - reference/index.md
+      - Settings reference: reference/settings.md
+      - Management commands: reference/management-commands.md
+  - Background: background.md
+  - Changelog: changelog.md

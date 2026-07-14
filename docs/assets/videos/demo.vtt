@@ -1,0 +1,49 @@
+WEBVTT
+
+1
+00:00:00.000 --> 00:00:04.435
+Your API is fast in dev. In production, under real load — is it?
+
+2
+00:00:04.435 --> 00:00:05.846
+Staff-only, secured behind Django admin auth.
+
+3
+00:00:05.846 --> 00:00:15.472
+One dashboard: P99 latency, error rate, DB queries, and scale signals.
+
+4
+00:00:15.472 --> 00:00:22.759
+Drill into any request — headers and body, redacted and capped, opt-in only.
+
+5
+00:00:22.759 --> 00:00:28.512
+api/diagnostics/nplusone/ — 76 queries per request, 68% of total DB time.
+
+6
+00:00:28.512 --> 00:00:34.746
+One click on the offender → straight to root-cause correlation for it.
+
+7
+00:00:34.746 --> 00:00:45.340
+CPU, RAM, Redis, Postgres — every tier, hover for the exact percentage.
+
+8
+00:00:45.340 --> 00:00:48.732
+WebSocket lifecycle and raw event logs, same level of detail.
+
+9
+00:00:48.732 --> 00:00:57.817
+Generate a bottleneck report — ranked P1/P2/P3 findings.
+
+10
+00:00:57.817 --> 00:01:04.475
+Rendered PDF, ready to download.
+
+11
+00:01:04.475 --> 00:01:07.538
+Downloaded.
+
+12
+00:01:07.538 --> 00:01:09.640
+django-perfy — pip install "django-perfy[reports]"
