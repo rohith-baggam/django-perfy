@@ -4,6 +4,7 @@ site_url: https://rohith-baggam.github.io/django-perfy/
 repo_name: rohith-baggam/django-perfy
 repo_url: https://github.com/rohith-baggam/django-perfy
 edit_uri: edit/main/docs/
+copyright: Copyright &copy; 2026 Rohith Baggam &mdash; MIT License
 
 theme:
   name: material
