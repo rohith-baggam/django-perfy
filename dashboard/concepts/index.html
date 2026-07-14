@@ -1,0 +1,2248 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="API, WebSocket and server performance monitoring for Django, with a built-in admin dashboard and PDF reports.">
+      
+      
+      
+        <link rel="canonical" href="https://rohith-baggam.github.io/django-perfy/dashboard/concepts/">
+      
+      
+        <link rel="prev" href="../">
+      
+      
+        <link rel="next" href="../overview/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+    
+    
+      
+        <title>Metrics & concepts - django-perfy</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.484c7ddc.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#metrics-and-concepts" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="django-perfy" class="md-header__button md-logo" aria-label="django-perfy" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            django-perfy
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Metrics & concepts
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+          <a href="javascript:void(0)" class="md-search__icon md-icon" title="Share" aria-label="Share" data-clipboard data-clipboard-text="" data-md-component="search-share" tabindex="-1">
+            
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9a3 3 0 0 0-3 3 3 3 0 0 0 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.15c-.05.21-.08.43-.08.66 0 1.61 1.31 2.91 2.92 2.91s2.92-1.3 2.92-2.91A2.92 2.92 0 0 0 18 16.08"/></svg>
+          </a>
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/rohith-baggam/django-perfy" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    rohith-baggam/django-perfy
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="django-perfy" class="md-nav__button md-logo" aria-label="django-perfy" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    django-perfy
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/rohith-baggam/django-perfy" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    rohith-baggam/django-perfy
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../why-django-perfy/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Why django-perfy
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting started
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../installation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Installation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../dependencies/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Dependencies
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../configuration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Configuration
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_7" >
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../../features/" class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Features
+  
+
+    
+  </span>
+  
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_7" id="__nav_7_label" tabindex="0">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_7">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Features
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../features/api-monitoring/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    API monitoring
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../features/websocket-monitoring/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    WebSocket monitoring
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../features/resource-snapshots/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Resource snapshots & rollups
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../features/dashboard-and-reports/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Dashboard & reports
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_8" checked>
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../" class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Dashboard
+  
+
+    
+  </span>
+  
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_8" id="__nav_8_label" tabindex="0">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_8_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_8">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Dashboard
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Metrics & concepts
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Metrics & concepts
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#sampling-and-inverse-probability-weighting" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Sampling and inverse-probability weighting
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#percentiles-p50-p95-p99" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Percentiles: p50, p95, p99
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Percentiles: p50, p95, p99">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#how-the-dashboard-computes-them" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        How the dashboard computes them
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#sla-and-within-sla" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        SLA and within-SLA %
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#apdex" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Apdex
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#error-rate" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Error rate
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#throughput" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Throughput
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#concurrency" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Concurrency
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#database-cost-query-count-db-time-db" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Database cost: query count, DB time, DB %
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Database cost: query count, DB time, DB %">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#db-offenders" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        DB offenders
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#resource-metrics" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Resource metrics
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#scale-recommendations-server-health-scaling" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Scale recommendations (server health scaling)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Scale recommendations (server health scaling)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#api" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        API
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#server" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Server
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#database" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Database
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#user-hash" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        User hash
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#the-time-range-selector" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The time range selector
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../overview/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview page
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api-performance/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    API performance page
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../websocket/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    WebSocket page
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../system-resources/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    System resources page
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../database-queries/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Database queries page
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../correlation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Correlation page
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../raw-logs/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Raw logs page
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../reports/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Report metrics
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_9" >
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../../guides/" class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Guides
+  
+
+    
+  </span>
+  
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_9" id="__nav_9_label" tabindex="0">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_9_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_9">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Guides
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/secondary-database/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Secondary database
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/email/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Emailing reports
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/celery-setup/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Celery setup
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_10" >
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../../reference/" class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference
+  
+
+    
+  </span>
+  
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_10" id="__nav_10_label" tabindex="0">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_10_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_10">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/settings/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Settings reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/management-commands/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Management commands
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../background/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Background
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../changelog/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Changelog
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#sampling-and-inverse-probability-weighting" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Sampling and inverse-probability weighting
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#percentiles-p50-p95-p99" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Percentiles: p50, p95, p99
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Percentiles: p50, p95, p99">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#how-the-dashboard-computes-them" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        How the dashboard computes them
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#sla-and-within-sla" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        SLA and within-SLA %
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#apdex" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Apdex
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#error-rate" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Error rate
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#throughput" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Throughput
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#concurrency" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Concurrency
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#database-cost-query-count-db-time-db" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Database cost: query count, DB time, DB %
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Database cost: query count, DB time, DB %">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#db-offenders" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        DB offenders
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#resource-metrics" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Resource metrics
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#scale-recommendations-server-health-scaling" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Scale recommendations (server health scaling)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Scale recommendations (server health scaling)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#api" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        API
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#server" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Server
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#database" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Database
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#user-hash" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        User hash
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#the-time-range-selector" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The time range selector
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="metrics-and-concepts">Metrics and concepts<a class="headerlink" href="#metrics-and-concepts" title="Permanent link">&para;</a></h1>
+<p>Every number on the dashboard and in the reports comes from one of four raw
+sources — <code>APIRequestLog</code>, <code>WebSocketEventLog</code>, <code>SystemResourceSnapshot</code> and the
+rolled-up <code>PerformanceSummary</code>. This page defines each metric and shows exactly
+how it is calculated, including the thresholds that drive the colour coding.
+The per-page guides link back here rather than repeating the definitions.</p>
+<h2 id="sampling-and-inverse-probability-weighting">Sampling and inverse-probability weighting<a class="headerlink" href="#sampling-and-inverse-probability-weighting" title="Permanent link">&para;</a></h2>
+<p>This concept underpins almost every count and rate on the dashboard, so it
+comes first.</p>
+<p>The middleware does not store every request. Two categories are <strong>always</strong>
+stored:</p>
+<ul>
+<li>Requests at or above <code>SLOW_REQUEST_THRESHOLD_MS</code> (default 500 ms).</li>
+<li>Requests with a 4xx or 5xx status.</li>
+</ul>
+<p>Everything else is stored with probability <code>SAMPLING_RATE</code> (default 0.1, i.e.
+10%). If the dashboard simply counted stored rows, throughput would look ~10x
+too low and the error rate would look far too high, because errors are stored
+at 100% while normal requests are stored at 10%.</p>
+<p>To correct for this, the dashboard weights each stored row by the inverse of
+its storage probability — an estimate of how many real requests it represents:</p>
+<table>
+<thead>
+<tr>
+<th>Stored row</th>
+<th>Weight</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Slow (≥ threshold) or error (≥ 400)</td>
+<td><code>1.0</code></td>
+<td>Stored at 100%, represents itself</td>
+</tr>
+<tr>
+<td>Normal, sampled</td>
+<td><code>1 / SAMPLING_RATE</code> (e.g. <code>10.0</code>)</td>
+<td>One stored row stands in for ~10 real requests</td>
+</tr>
+</tbody>
+</table>
+<p>Counts, rates and weighted averages sum these weights instead of counting rows.
+So "total requests" is an estimate of true traffic, not the stored row count,
+and the error rate reflects real proportions.</p>
+<div class="admonition note">
+<p class="admonition-title">Where this lives in the code</p>
+<p>The weight is the <code>_weight()</code> expression in <code>dashboard/views.py</code>;
+<code>_wmul(field)</code> is <code>weight × field</code>, used for weighted sums like total DB
+time. Set <code>SAMPLING_RATE</code> to <code>1.0</code> to store everything and make weights
+all <code>1.0</code> — useful in staging where volume is low.</p>
+</div>
+<h2 id="percentiles-p50-p95-p99">Percentiles: p50, p95, p99<a class="headerlink" href="#percentiles-p50-p95-p99" title="Permanent link">&para;</a></h2>
+<p>A percentile is the value below which that percentage of requests fall. For
+response time:</p>
+<ul>
+<li><strong>p50</strong> (median) — half of requests were faster than this.</li>
+<li><strong>p95</strong> — 95% were faster; the slowest 5% were worse. This is the number
+  most teams hold themselves to, because it captures the experience of the
+  unlucky tail without being dominated by a handful of outliers.</li>
+<li><strong>p99</strong> — 99% were faster. The worst 1%. Sensitive to rare slow requests,
+  which is exactly what makes it a good early-warning signal.</li>
+</ul>
+<p>Percentiles describe the tail in a way an average cannot: an endpoint with a
+40 ms average can still have a 900 ms p99, and it is that p99 that a user
+notices.</p>
+<h3 id="how-the-dashboard-computes-them">How the dashboard computes them<a class="headerlink" href="#how-the-dashboard-computes-them" title="Permanent link">&para;</a></h3>
+<p>Percentiles are <strong>not</strong> recomputed from raw rows on every page load. They are
+read from <code>PerformanceSummary</code>, which stores per-endpoint p50/p95/p99 for each
+minute and hour window. Those stored percentiles are produced during
+aggregation with a nearest-rank method over the window's sorted response times:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>index = int(count × percentile / 100)      # capped at count − 1
+</code></pre></div>
+<p>The dashboard then combines the per-endpoint, per-window percentiles into the
+single figure shown in the KPI tile using a <strong>request-weighted average</strong> —
+each summary row contributes in proportion to its <code>total_requests</code>:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>p95_shown = Σ(row.p95 × row.total_requests) / Σ(row.total_requests)
+</code></pre></div>
+<div class="admonition warning">
+<p class="admonition-title">This is a weighted blend, not a global exact percentile</p>
+<p>Reading pre-aggregated summaries keeps the dashboard fast, at the cost of
+exactness: the displayed p95 is a request-weighted blend of many windows'
+p95 values, not the true p95 of every individual request in the range. It
+tracks the real percentile closely and, crucially, weights busy endpoints
+heavily so a hot endpoint is not averaged away by many quiet ones (which a
+plain <code>Avg(p95)</code> would do). For an exact percentile over a narrow window,
+use the raw-logs page.</p>
+</div>
+<h2 id="sla-and-within-sla">SLA and within-SLA %<a class="headerlink" href="#sla-and-within-sla" title="Permanent link">&para;</a></h2>
+<p>The SLA (service-level agreement) target is a single latency threshold:
+requests faster than it are "within SLA". On the dashboard this threshold is
+<code>SLA_THRESHOLD_MS</code>, fixed at <strong>300 ms</strong>.</p>
+<p>Within-SLA % is the sampling-weighted share of requests under that threshold:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>within_sla_% = Σ weight[response_time_ms &lt; 300] / Σ weight × 100
+</code></pre></div>
+<p>So an SLA of 98% means an estimated 98% of real requests completed in under
+300 ms. The reports use the same 300 ms default (<code>SLA_MS</code>), configurable via
+<code>PERFORMANCE_REPORTS</code>.</p>
+<h2 id="apdex">Apdex<a class="headerlink" href="#apdex" title="Permanent link">&para;</a></h2>
+<p>Apdex (Application Performance Index) condenses latency into a single 0–1
+satisfaction score around a target time <strong>T</strong> (<code>APDEX_T_MS</code>, default 300 ms).
+Each request is bucketed:</p>
+<table>
+<thead>
+<tr>
+<th>Bucket</th>
+<th>Condition</th>
+<th>Counts as</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Satisfied</td>
+<td><code>response_time ≤ T</code></td>
+<td>1.0</td>
+</tr>
+<tr>
+<td>Tolerating</td>
+<td><code>T &lt; response_time ≤ 4T</code></td>
+<td>0.5</td>
+</tr>
+<tr>
+<td>Frustrated</td>
+<td><code>response_time &gt; 4T</code></td>
+<td>0.0</td>
+</tr>
+</tbody>
+</table>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>Apdex = (satisfied + tolerating / 2) / total        # sampling-weighted
+</code></pre></div>
+<p>The score is colour-coded in the reports: <strong>≥ 0.94 green</strong>, <strong>≥ 0.85 amber</strong>,
+otherwise <strong>red</strong>. Apdex appears in the latency report; the dashboard leads
+with raw percentiles and within-SLA instead.</p>
+<h2 id="error-rate">Error rate<a class="headerlink" href="#error-rate" title="Permanent link">&para;</a></h2>
+<p>The sampling-weighted share of requests with a 4xx or 5xx status:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>error_rate_% = Σ weight[status ≥ 400] / Σ weight × 100
+</code></pre></div>
+<p>Because errors are force-stored at 100% and weighted at 1.0, this reflects the
+true proportion rather than the inflated raw-row proportion. A separate
+non-weighted error <strong>count</strong> is also shown for the raw number of stored error
+rows.</p>
+<h2 id="throughput">Throughput<a class="headerlink" href="#throughput" title="Permanent link">&para;</a></h2>
+<p>Estimated real traffic volume over the selected range, expressed per minute:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>total_requests   = Σ weight                          # estimated true volume
+<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>throughput_rpm   = total_requests / window_seconds × 60
+</code></pre></div>
+<p>The reports also derive requests-per-second (<code>rpm / 60</code>) and a peak rate from
+the busiest time bucket.</p>
+<h2 id="concurrency">Concurrency<a class="headerlink" href="#concurrency" title="Permanent link">&para;</a></h2>
+<p><code>concurrent_requests</code> is recorded per request from a thread-local counter the
+middleware increments when a request starts and decrements when it finishes.
+The dashboard shows the <strong>peak</strong> (<code>Max(concurrent_requests)</code>); the throughput
+report also derives mean and p95.</p>
+<div class="admonition note">
+<p class="admonition-title">Per-process, not global</p>
+<p>The counter is local to one worker process, so concurrency is a
+same-process approximation — it does not sum across gunicorn/uvicorn
+workers or hosts. Read it as "how loaded was a single worker", not "total
+in-flight requests across the fleet".</p>
+</div>
+<h2 id="database-cost-query-count-db-time-db">Database cost: query count, DB time, DB %<a class="headerlink" href="#database-cost-query-count-db-time-db" title="Permanent link">&para;</a></h2>
+<p>For the duration of each request the middleware wraps the database connection
+with Django's <code>execute_wrapper</code>, so it counts <strong>every</strong> query the request
+triggers — including queries inside third-party code, not just the ORM calls
+django-perfy knows about — and sums their execution time.</p>
+<table>
+<thead>
+<tr>
+<th>Metric</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>db_query_count</code></td>
+<td>Number of queries the request ran</td>
+</tr>
+<tr>
+<td><code>db_time_ms</code></td>
+<td>Total time spent in the database</td>
+</tr>
+<tr>
+<td>DB %</td>
+<td><code>avg_db_time / avg_response_time × 100</code> — how much of a request's wall-clock time is database-bound</td>
+</tr>
+</tbody>
+</table>
+<p>A high DB % points at a database-bound endpoint (optimise queries); a low DB %
+on a slow endpoint points at CPU or external calls instead.</p>
+<h3 id="db-offenders">DB offenders<a class="headerlink" href="#db-offenders" title="Permanent link">&para;</a></h3>
+<p>Ranking endpoints by average DB time per request hides cheap-but-constant
+offenders. The dashboard instead ranks by <strong>estimated total DB time</strong>, which
+folds in volume:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>est_total_db_ms = Σ (weight × db_time_ms)            # per endpoint
+<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>share_pct       = est_total_db_ms / Σ est_total_db_ms × 100
+</code></pre></div>
+<p>This surfaces where fixing queries actually pays off most across the whole
+range.</p>
+<h2 id="resource-metrics">Resource metrics<a class="headerlink" href="#resource-metrics" title="Permanent link">&para;</a></h2>
+<p><code>SystemResourceSnapshot</code> rows carry CPU, memory, disk and per-service fields.
+Two points matter for reading them:</p>
+<ul>
+<li><strong>CPU is normalised by logical core count.</strong> A process saturating two cores
+  on a four-core host reads as <strong>50%, not 200%</strong> — this matches how
+  Prometheus/node_exporter-style tools report process CPU, and keeps the
+  0–100% scale meaningful.</li>
+<li><strong>Peaks vs means.</strong> KPI tiles show the peak CPU/RAM over the range
+  (<code>Max(...)</code>), because the worst moment is what threatens capacity; trend
+  charts show the full series so you can see whether a peak was sustained or a
+  spike.</li>
+</ul>
+<h2 id="scale-recommendations-server-health-scaling">Scale recommendations (server health scaling)<a class="headerlink" href="#scale-recommendations-server-health-scaling" title="Permanent link">&para;</a></h2>
+<p>The Overview page turns the KPIs into three plain-language recommendations —
+API, Server and Database — each shown green, amber or red. These are not
+machine-learning predictions; they are threshold bands applied to the range's
+KPIs, so the logic is fully transparent and lives in <code>_scale_recommendations</code>.</p>
+<h3 id="api">API<a class="headerlink" href="#api" title="Permanent link">&para;</a></h3>
+<p>Driven by p99 latency and peak concurrency:</p>
+<table>
+<thead>
+<tr>
+<th>Colour</th>
+<th>Condition</th>
+<th>Recommendation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Red</td>
+<td><code>p99 &gt; 500 ms</code> or <code>peak_concurrency &gt; 50</code></td>
+<td>Scale Now</td>
+</tr>
+<tr>
+<td>Amber</td>
+<td><code>p99 &gt; 250 ms</code> or <code>peak_concurrency &gt; 30</code></td>
+<td>Monitor</td>
+</tr>
+<tr>
+<td>Green</td>
+<td>otherwise</td>
+<td>Healthy</td>
+</tr>
+</tbody>
+</table>
+<p>(The recommendation text is driven by p99 alone: <code>&gt; 500</code> Scale Now, <code>&gt; 250</code>
+Monitor, else Healthy.)</p>
+<h3 id="server">Server<a class="headerlink" href="#server" title="Permanent link">&para;</a></h3>
+<p>Driven by peak CPU and peak RAM:</p>
+<table>
+<thead>
+<tr>
+<th>Colour</th>
+<th>Condition</th>
+<th>Recommendation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Red</td>
+<td><code>peak_cpu &gt; 80%</code> or <code>peak_ram &gt; 85%</code></td>
+<td>Scale Server</td>
+</tr>
+<tr>
+<td>Amber</td>
+<td><code>peak_cpu &gt; 60%</code> or <code>peak_ram &gt; 70%</code></td>
+<td>Monitor</td>
+</tr>
+<tr>
+<td>Green</td>
+<td>otherwise</td>
+<td>Healthy</td>
+</tr>
+</tbody>
+</table>
+<h3 id="database">Database<a class="headerlink" href="#database" title="Permanent link">&para;</a></h3>
+<p>Driven by average queries per request and DB %:</p>
+<table>
+<thead>
+<tr>
+<th>Colour</th>
+<th>Condition</th>
+<th>Recommendation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Red</td>
+<td><code>avg_queries &gt; 10</code> or <code>DB% &gt; 50</code></td>
+<td>Optimize Queries</td>
+</tr>
+<tr>
+<td>Amber</td>
+<td><code>avg_queries &gt; 6</code></td>
+<td>Monitor</td>
+</tr>
+<tr>
+<td>Green</td>
+<td>otherwise</td>
+<td>Healthy</td>
+</tr>
+</tbody>
+</table>
+<div class="admonition tip">
+<p class="admonition-title">Tuning the bands</p>
+<p>The dashboard bands are constants in <code>dashboard/views.py</code>. The reports read
+the equivalent thresholds from <code>PERFORMANCE_REPORTS</code> (<code>P99_AMBER_MS</code>,
+<code>P99_RED_MS</code>, <code>CPU_WARN_PCT</code>, <code>CPU_CRIT_PCT</code>, <code>RAM_WARN_PCT</code>,
+<code>RAM_CRIT_PCT</code>, <code>DBQ_AMBER</code>, <code>DBQ_RED</code>, <code>DB_TIME_PCT_RED</code>), so a report and
+the dashboard agree on what "amber" means. See
+<a href="../reports/">Report metrics</a>.</p>
+</div>
+<h2 id="user-hash">User hash<a class="headerlink" href="#user-hash" title="Permanent link">&para;</a></h2>
+<p>Authenticated requests store an HMAC-SHA256 hash of the user id (salted with
+<code>USER_ID_SALT</code>), never the raw id. It lets you tell "the same user" apart
+across rows without putting identifiable user data in the telemetry tables.</p>
+<h2 id="the-time-range-selector">The time range selector<a class="headerlink" href="#the-time-range-selector" title="Permanent link">&para;</a></h2>
+<p>Every page takes a <code>range</code> (1h, 6h, 24h, 7d, 30d). It sets the lower bound
+<code>since</code> for all queries on the page. Ranges of 6h or less bucket trend charts
+by minute; larger ranges bucket by hour. The reports use the same ranges plus
+<code>all</code>, and read minute-granularity summaries for 1h/6h and hour-granularity for
+everything larger.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+    
+      
+      <nav class="md-footer__inner md-grid" aria-label="Footer" >
+        
+          
+          <a href="../" class="md-footer__link md-footer__link--prev" aria-label="Previous: Reading the dashboard">
+            <div class="md-footer__button md-icon">
+              
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+            </div>
+            <div class="md-footer__title">
+              <span class="md-footer__direction">
+                Previous
+              </span>
+              <div class="md-ellipsis">
+                Reading the dashboard
+              </div>
+            </div>
+          </a>
+        
+        
+          
+          <a href="../overview/" class="md-footer__link md-footer__link--next" aria-label="Next: Overview page">
+            <div class="md-footer__title">
+              <span class="md-footer__direction">
+                Next
+              </span>
+              <div class="md-ellipsis">
+                Overview page
+              </div>
+            </div>
+            <div class="md-footer__button md-icon">
+              
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M4 11v2h12l-5.5 5.5 1.42 1.42L19.84 12l-7.92-7.92L10.5 5.5 16 11z"/></svg>
+            </div>
+          </a>
+        
+      </nav>
+    
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+    <div class="md-copyright__highlight">
+      Copyright &copy; 2026 Rohith Baggam &mdash; MIT License
+    </div>
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+        
+<div class="md-social">
+  
+    
+    
+    
+    
+    <a href="https://github.com/rohith-baggam/django-perfy" target="_blank" rel="noopener" title="django-perfy on GitHub" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+    </a>
+  
+    
+    
+    
+    
+    <a href="https://pypi.org/project/django-perfy/" target="_blank" rel="noopener" title="django-perfy on PyPI" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.8 200.5c-7.7-30.9-22.3-54.2-53.4-54.2h-40.1v47.4c0 36.8-31.2 67.8-66.8 67.8H172.7c-29.2 0-53.4 25-53.4 54.3v101.8c0 29 25.2 46 53.4 54.3 33.8 9.9 66.3 11.7 106.8 0 26.9-7.8 53.4-23.5 53.4-54.3v-40.7H226.2v-13.6h160.2c31.1 0 42.6-21.7 53.4-54.2 11.2-33.5 10.7-65.7 0-108.6M286.2 444.7a20.4 20.4 0 1 1 0-40.7 20.4 20.4 0 1 1 0 40.7M167.8 248.1h106.8c29.7 0 53.4-24.5 53.4-54.3V91.9c0-29-24.4-50.7-53.4-55.6-35.8-5.9-74.7-5.6-106.8.1-45.2 8-53.4 24.7-53.4 55.6v40.7h106.9v13.6h-147c-31.1 0-58.3 18.7-66.8 54.2-9.8 40.7-10.2 66.1 0 108.6 7.6 31.6 25.7 54.2 56.8 54.2H101v-48.8c0-35.3 30.5-66.4 66.8-66.4m-6.6-183.4a20.4 20.4 0 1 1 0 40.8 20.4 20.4 0 1 1 0-40.8"/></svg>
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.instant", "navigation.tracking", "navigation.indexes", "navigation.top", "navigation.footer", "toc.follow", "search.suggest", "search.highlight", "search.share", "content.code.copy", "content.code.annotate", "content.tooltips"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+    
+  </body>
+</html>
