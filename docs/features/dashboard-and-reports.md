@@ -4,6 +4,13 @@ The dashboard is a staff-only set of pages rendered with a small Jinja2
 environment; the reports engine renders latency, throughput, bottlenecks and
 resource-utilization documents to HTML (preview) and PDF (download / email).
 
+!!! tip "Looking for what the numbers mean?"
+    This page is about *setting up* the dashboard. For what each page and
+    component shows and exactly how each metric is calculated — p50/p95/p99,
+    SLA, Apdex, sampling correction, the scale-recommendation bands, report
+    scoring — see the [Dashboard](../dashboard/index.md) section, anchored by
+    [Metrics and concepts](../dashboard/concepts.md).
+
 Both require the `reports` extra:
 
 ```bash

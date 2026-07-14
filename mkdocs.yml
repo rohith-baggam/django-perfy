@@ -66,6 +66,17 @@ nav:
       - WebSocket monitoring: features/websocket-monitoring.md
       - Resource snapshots & rollups: features/resource-snapshots.md
       - Dashboard & reports: features/dashboard-and-reports.md
+  - Dashboard:
+      - dashboard/index.md
+      - Metrics & concepts: dashboard/concepts.md
+      - Overview page: dashboard/overview.md
+      - API performance page: dashboard/api-performance.md
+      - WebSocket page: dashboard/websocket.md
+      - System resources page: dashboard/system-resources.md
+      - Database queries page: dashboard/database-queries.md
+      - Correlation page: dashboard/correlation.md
+      - Raw logs page: dashboard/raw-logs.md
+      - Report metrics: dashboard/reports.md
   - Guides:
       - guides/index.md
       - Secondary database: guides/secondary-database.md
