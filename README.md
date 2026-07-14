@@ -9,6 +9,8 @@ events and host resource usage (CPU / memory / Redis / Postgres), rolls them up
 into summaries, and surfaces everything through a dashboard and downloadable PDF
 reports.
 
+📖 **Full documentation: <https://rohith-baggam.github.io/django-perfy/>**
+
 ---
 
 ## Features
@@ -45,17 +47,42 @@ pip install "django-perfy[reports]" # + dashboard & PDF reports
 
 ## Quickstart
 
-### 1. Install the app
-
 ```python
 # settings.py
 INSTALLED_APPS = [
     # ...
     "django_perfy",
 ]
+
+MIDDLEWARE = [
+    # ... after AuthenticationMiddleware so request.user is available ...
+    "django_perfy.middleware.PerformanceMiddleware",
+]
 ```
 
-### 2. Configure it
+```bash
+python manage.py migrate
+```
+
+Instrument WebSocket consumers (optional):
+
+```python
+from channels.generic.websocket import AsyncWebsocketConsumer
+from django_perfy.mixins import WebSocketLoggingMixin
+
+class ChatConsumer(WebSocketLoggingMixin, AsyncWebsocketConsumer):
+    ...
+```
+
+Full install steps — extras, WeasyPrint system libraries, the dashboard's
+Jinja2 backend and static files, and the secondary-database migration — are in
+the [documentation](https://rohith-baggam.github.io/django-perfy/installation/).
+
+## Configuration
+
+All configuration lives in a single `PERFORMANCE_MONITOR` dict. Any key you omit
+falls back to its default, and Django's system-check framework validates the
+block on `manage.py check`.
 
 ```python
 PERFORMANCE_MONITOR = {
@@ -70,7 +97,7 @@ PERFORMANCE_MONITOR = {
     "SERVICES": [],
 
     # Off by default: headers/bodies routinely carry session cookies/auth
-    # tokens/PII. See docs/configuration.md for the full redaction options.
+    # tokens/PII. See the settings reference for the full redaction options.
     "CAPTURE_HEADERS": False,
     "REDACTED_HEADERS": ["authorization", "cookie", "set-cookie", "x-api-key"],
     "CAPTURE_BODY": False,
@@ -81,111 +108,29 @@ PERFORMANCE_MONITOR = {
 }
 ```
 
-See [docs/configuration.md](docs/configuration.md) for every option.
+> **`CAPTURE_HEADERS` and `CAPTURE_BODY` default to `False`** because headers and
+> bodies routinely carry session cookies, auth tokens and other PII. Leave both
+> off until you've reviewed `REDACTED_HEADERS` and `REDACTED_BODY_FIELDS` —
+> turning them on isn't a casual flip.
 
-### 3. Add the API middleware
+Every key, its type, default and description is in the
+[settings reference](https://rohith-baggam.github.io/django-perfy/reference/settings/),
+and the parts that need more explanation are covered under
+[Configuration](https://rohith-baggam.github.io/django-perfy/configuration/).
 
-```python
-MIDDLEWARE = [
-    # ... after AuthenticationMiddleware so request.user is available ...
-    "django_perfy.middleware.PerformanceMiddleware",
-]
-```
+## Documentation
 
-### 4. Instrument WebSocket consumers (optional)
-
-```python
-from channels.generic.websocket import AsyncWebsocketConsumer
-from django_perfy.mixins import WebSocketLoggingMixin
-
-class ChatConsumer(WebSocketLoggingMixin, AsyncWebsocketConsumer):
-    ...
-```
-
-### 5. Run migrations
-
-```bash
-python manage.py migrate
-# If DATABASE points at a secondary alias, migrate that one too:
-python manage.py migrate --database=performance
-```
-
-### 6. Mount the dashboard (optional)
-
-See [docs/dashboard-and-reports.md](docs/dashboard-and-reports.md) for the
-Jinja2 template backend, `STATICFILES_DIRS`, and URL wiring. In short:
-
-```python
-import django_perfy
-
-TEMPLATES = [
-    {
-        "BACKEND": "django.template.backends.jinja2.Jinja2",
-        "DIRS": [django_perfy.DASHBOARD_TEMPLATES_DIR],
-        "APP_DIRS": False,
-        "OPTIONS": {
-            "environment": "django_perfy.dashboard.jinja2_env.make_environment",
-        },
-    },
-    # ... your existing DjangoTemplates backend (APP_DIRS: True) ...
-]
-```
-
-The dashboard's CSS/JS ship inside the package (`django_perfy/static/`) and are
-found automatically by `AppDirectoriesFinder` — no `STATICFILES_DIRS` entry
-needed. Just run `collectstatic` for production.
-
-```python
-# urls.py
-urlpatterns += [path("performance/", include("django_perfy.urls"))]
-```
-
-> **Serving the dashboard's CSS/JS:** `runserver` serves them automatically, but
-> gunicorn/uWSGI/daphne do **not** serve static files — under those the
-> dashboard loads unstyled until you `collectstatic` and serve `STATIC_ROOT`
-> (e.g. with WhiteNoise or nginx). See
-> [docs/dashboard-and-reports.md](docs/dashboard-and-reports.md#serving-those-static-files-important-under-gunicornuwsgi).
-
-## Storing telemetry in a secondary database
-
-Set `PERFORMANCE_MONITOR["DATABASE"]` to any alias declared in `DATABASES`:
-
-```python
-DATABASES = {
-    "default": {...},
-    "performance": {
-        "ENGINE": "django.db.backends.postgresql",
-        "NAME": "perf_metrics",
-        # ...
-    },
-}
-
-PERFORMANCE_MONITOR = {"DATABASE": "performance", ...}
-```
-
-The bundled `PerformanceRouter` is registered automatically and pins the
-`performance` app's reads, writes and migrations to that alias. Full details and
-the multi-database migrate/backup workflow are in
-[docs/secondary-database.md](docs/secondary-database.md).
-
-## Emailing reports
-
-Report emailing reads SMTP credentials from settings and raises loudly when it
-is misconfigured. See [docs/email.md](docs/email.md).
-
-## Celery
-
-The app ships Celery tasks (persistence, aggregation, snapshots, retention,
-report email). Point Celery at your broker and, optionally, schedule the
-periodic tasks with Celery Beat. The app also runs lightweight background timers
-so summaries and web-process snapshots populate even without Beat. Task names are
-namespaced under `django_perfy.tasks.*`.
-
-## Management commands
-
-- `python manage.py rebuild_summaries` — recompute `PerformanceSummary` rollups.
-- `python manage.py performance_report` — generate a report from the CLI.
-- `python manage.py export_resource_snapshots` — export resource snapshots.
+| Topic | Link |
+| --- | --- |
+| Why django-perfy (vs Prometheus/Grafana) | <https://rohith-baggam.github.io/django-perfy/why-django-perfy/> |
+| Getting started | <https://rohith-baggam.github.io/django-perfy/getting-started/> |
+| Configuration | <https://rohith-baggam.github.io/django-perfy/configuration/> |
+| Dashboard & reports | <https://rohith-baggam.github.io/django-perfy/features/dashboard-and-reports/> |
+| Secondary database | <https://rohith-baggam.github.io/django-perfy/guides/secondary-database/> |
+| Emailing reports | <https://rohith-baggam.github.io/django-perfy/guides/email/> |
+| Celery setup | <https://rohith-baggam.github.io/django-perfy/guides/celery-setup/> |
+| Management commands | <https://rohith-baggam.github.io/django-perfy/reference/management-commands/> |
+| Intro, demo & installation videos | <https://rohith-baggam.github.io/django-perfy/background/> |
 
 ## Development
 
