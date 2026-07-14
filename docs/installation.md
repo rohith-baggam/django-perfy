@@ -15,6 +15,9 @@ condensed path from install to first request, see
 
 ## Install with pip
 
+django-perfy is published on PyPI at
+<https://pypi.org/project/django-perfy/>.
+
 ```bash
 pip install django-perfy            # core: middleware, mixin, models, tasks
 pip install "django-perfy[reports]" # + dashboard and PDF reports

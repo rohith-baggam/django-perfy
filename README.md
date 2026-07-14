@@ -50,6 +50,8 @@ reports.
 
 ## Installation
 
+Published on PyPI: <https://pypi.org/project/django-perfy/>
+
 ```bash
 pip install django-perfy            # core
 pip install "django-perfy[reports]" # + dashboard & PDF reports

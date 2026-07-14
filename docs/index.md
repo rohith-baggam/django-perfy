@@ -18,6 +18,13 @@ dashboard. No external time-series database, no agent process — the package
 stores everything in your existing Django database, or a secondary one if
 you'd rather isolate the write load.
 
+```bash
+pip install "django-perfy[reports]"
+```
+
+- 📦 **PyPI:** <https://pypi.org/project/django-perfy/>
+- 💻 **Source (GitHub):** <https://github.com/rohith-baggam/django-perfy/>
+
 ## Why
 
 - **You already have the data.** django-perfy captures it from inside the

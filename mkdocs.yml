@@ -89,3 +89,12 @@ nav:
       - Management commands: reference/management-commands.md
   - Background: background.md
   - Changelog: changelog.md
+
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/rohith-baggam/django-perfy
+      name: django-perfy on GitHub
+    - icon: fontawesome/brands/python
+      link: https://pypi.org/project/django-perfy/
+      name: django-perfy on PyPI
